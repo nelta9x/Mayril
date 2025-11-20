@@ -30,121 +30,86 @@ namespace Mayril.AbilitySystem
         /// <summary>
         /// 어빌리티 소유자가 스폰되었을 때 호출됩니다.
         /// </summary>
-        public void OnOwnerSpawned()
-        {
-        }
+        public void OnOwnerSpawned();
 
         /// <summary>
         /// 어빌리티가 소유자에게 추가된 후 호출됩니다.
         /// </summary>
-        public void OnAdded()
-        {
-        }
+        public void OnAdded();
 
         /// <summary>
         /// 어빌리티가 소유자에게서 제거된 후 호출됩니다.
         /// </summary>
-        public void OnRemoved()
-        {
-        }
+        public void OnRemoved();
 
         /// <summary>
         /// 어빌리티 소유자가 죽었을 때 호출됩니다.
         /// </summary>
-        public void OnOwnerDied()
-        {
-        }
+        public void OnOwnerDied();
 
         /// <summary>
         /// 소유자가 이동했을 때 호출됩니다.
         /// </summary>
-        public void OnOwnerMoved()
-        {
-        }
+        public void OnOwnerMoved();
 
         /// <summary>
         /// 시전 준비를 시작 시 호출됩니다. (마나 소모 전)
         /// </summary>
-        public bool OnAbilityPhaseStart()
-        {
-            return false;
-        }
+        public bool OnAbilityPhaseStart();
 
         /// <summary>
         /// 시전 준비 중단 시 호출됩니다. (기절, 침묵 등)
         /// </summary>
-        public void OnAbilityPhaseInterrupted()
-        {
-        }
+        public void OnAbilityPhaseInterrupted();
 
         /// <summary>
         /// 스펠을 시작할 때 호출됩니다. (마나 소모 후)
         /// </summary>
-        public void OnSpellStart()
-        {
-        }
+        public void OnSpellStart();
 
         /// <summary>
         /// 채널링이 종료되었을 때 호출됩니다.
         /// </summary>
-        public void OnAbilityEndChannel()
-        {
-        }
+        public void OnAbilityEndChannel();
 
         /// <summary>
         /// 발사체가 히트되었을 때 호출됩니다.
         /// </summary>
-        public void OnProjectileHitEntity(Entity projectileEntity)
-        {
-        }
+        public void OnProjectileHitEntity(Entity projectileEntity);
 
         /// <summary>
         /// 발사체가 종료되었을 때 호출됩니다.
         /// </summary>
-        public void OnProjectileFinish(Entity projectileEntity)
-        {
-        }
+        public void OnProjectileFinish(Entity projectileEntity);
 
         /// <summary>
         /// 내가 누군가를 죽였을 때 호출됩니다.
         /// </summary>
-        public void OnKill()
-        {
-        }
+        public void OnKill();
 
         /// <summary>
         /// 내가 전리품을 획득했을 때 호출됩니다.
         /// </summary>
-        public void OnLoot(Entity loot)
-        {
-        }
+        public void OnLoot(Entity loot);
 
         /// <summary>
         /// 피해를 줬을 때 호출됩니다.
         /// </summary>
-        public void OnDamage()
-        {
-        }
+        public void OnDamage();
 
         /// <summary>
         /// 피해를 받았을 때 호출됩니다.
         /// </summary>
-        public void OnDamaged()
-        {
-        }
+        public void OnDamaged();
 
         /// <summary>
         /// 트리거에 들어왔을 때 호출됩니다.
         /// </summary>
-        public void OnTriggerEnter(Entity entity)
-        {
-        }
+        public void OnTriggerEnter(Entity entity);
 
         /// <summary>
         /// 트리거에서 나갈 때 호출됩니다.
         /// </summary>
-        public void OnTriggerExit(Entity entity)
-        {
-        }
+        public void OnTriggerExit(Entity entity);
     }
 }
