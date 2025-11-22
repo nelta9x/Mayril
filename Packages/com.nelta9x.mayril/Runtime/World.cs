@@ -19,6 +19,7 @@ namespace Mayril
         private readonly HashSet<Entity> _entities = new(256);
         private readonly Dictionary<int, List<Entity>> _entitiesByLayer = new(8);
         private readonly Dictionary<string, List<Entity>> _entitiesByTag = new(8);
+        private readonly TimerManager _timerManager = new();
         
         /// <summary>
         /// 게임 인스턴스.
@@ -43,6 +44,11 @@ namespace Mayril
         /// 모든 엔티티들.
         /// </summary>
         public IEnumerable<Entity> Entities => _entities;
+        
+        /// <summary>
+        /// 월드의 타이머 관리자.
+        /// </summary>
+        public TimerManager WorldTimerManager => _timerManager;
 
         /// <summary>
         /// 특정 태그의 엔티티들을 반환합니다.
@@ -236,6 +242,14 @@ namespace Mayril
             {
                 StartedWorld = this
             });
+        }
+
+        /// <summary>
+        /// 매 프레임 호출됩니다.
+        /// </summary>
+        public void Update()
+        {
+            _timerManager.Update(Time.deltaTime);
         }
 
         /// <summary>
