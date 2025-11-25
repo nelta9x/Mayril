@@ -10,17 +10,11 @@ namespace Mayril.AbilitySystem
     public class AbilityManager
     {
         private readonly List<IAbility> _abilities = new();
-        private readonly List<AbilityContext> _abilityContexts = new();
         
         /// <summary>
         /// 어빌리티들.
         /// </summary>
         public IReadOnlyList<IAbility> Abilities => _abilities;
-        
-        /// <summary>
-        /// 어빌리티 컨텍스트들.
-        /// </summary>
-        public IReadOnlyList<AbilityContext> AbilityContexts => _abilityContexts;
 
         /// <summary>
         /// 어빌리티를 반환합니다.
@@ -28,15 +22,6 @@ namespace Mayril.AbilitySystem
         public IAbility GetAbility(int abilityIndex)
         {
             return _abilities.ElementAtOrDefault(abilityIndex);
-        }
-
-        /// <summary>
-        /// 어빌리티 컨텍스트를 반환합니다.
-        /// 어빌리티가 있을 경우, 항상 어빌리티 컨텍스트도 같은 인덱스에 있음이 보장됩니다.
-        /// </summary>
-        public AbilityContext GetAbilityContext(int abilityIndex)
-        {
-            return _abilityContexts.ElementAtOrDefault(abilityIndex);
         }
 
         /// <summary>
@@ -48,11 +33,6 @@ namespace Mayril.AbilitySystem
             {
                 throw new ArgumentNullException(nameof(ability));
             }
-            
-            var newContext = new AbilityContext()
-            {
-                Ability = ability
-            };
 
             int abilityIndex = -1;
             for (int i = 0; i < _abilities.Count; i++)
@@ -61,8 +41,7 @@ namespace Mayril.AbilitySystem
                 {
                     abilityIndex = i;
                     _abilities[i] = ability;
-                    _abilityContexts[i] = newContext;
-                    ability.OnAdded(newContext);
+                    ability.OnAdded();
                     break;
                 }
             }
@@ -71,8 +50,7 @@ namespace Mayril.AbilitySystem
             {// 빈 어빌리티 공간이 없으므로 새로 할당.
                 abilityIndex = _abilities.Count;
                 _abilities.Add(ability);
-                _abilityContexts.Add(newContext);
-                ability.OnAdded(newContext);
+                ability.OnAdded();
             }
             
             return abilityIndex;
@@ -92,10 +70,8 @@ namespace Mayril.AbilitySystem
             {
                 if (_abilities[i] == ability)
                 {
-                    var context = _abilityContexts[i];
                     _abilities[i] = null;
-                    _abilityContexts[i] = null;
-                    ability.OnRemoved(context);
+                    ability.OnRemoved();
                     break;
                 }
             }

@@ -134,9 +134,7 @@ namespace Mayril.AbilitySystem
             {
                 bool hasDecreaseTag = HasMatchingTag(triggerModifier.DecreaseEnablerTags, existingModifier.ModifierTags);
                 bool hasIncreaseTag = HasMatchingTag(triggerModifier.IncreaseEnablerTags, existingModifier.ModifierTags);
-
                 int oldEnablerStack = existingModifier.EnablerStack;
-
                 if (isAdding)
                 {
                     // 모디파이어 추가 시
