@@ -127,7 +127,6 @@ namespace Mayril.StatSystem
             }
             
             _isDirty = true;
-
             return true;
         }
 
@@ -155,6 +154,11 @@ namespace Mayril.StatSystem
         /// </summary>
         public void OnAfterDeserialize()
         {
+            if (_modifiers == null)
+            {
+                return;
+            }
+            
             RecalculateValue();
         }
     }
