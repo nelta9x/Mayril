@@ -16,12 +16,14 @@ namespace Mayril.Internal
         /// </summary>
         internal struct TimeEvent
         {
-            public float ExecutionTime;
+            public ulong HandleId;
+            public double ExecutionTime;
             public Action Callback;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public TimeEvent(float executionTime, Action callback)
+            public TimeEvent(ulong handleId, double executionTime, Action callback)
             {
+                HandleId = handleId;
                 ExecutionTime = executionTime;
                 Callback = callback;
             }
@@ -58,7 +60,9 @@ namespace Mayril.Internal
         public TimerEventMinHeap(int capacity)
         {
             if (capacity <= 0)
-                capacity = DefaultCapacity;
+            {
+                capacity = DefaultCapacity;   
+            }
 
             _heap = new TimeEvent[capacity];
             _count = 0;
@@ -68,7 +72,7 @@ namespace Mayril.Internal
         /// 새 이벤트를 힙에 추가합니다. O(log n)
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void Enqueue(float executionTime, Action callback)
+        public void Enqueue(ulong handleId, double executionTime, Action callback)
         {
             if (_count == _heap.Length)
             {
@@ -76,7 +80,7 @@ namespace Mayril.Internal
             }
 
             // 배열 끝에 추가하고 위로 올림
-            _heap[_count] = new TimeEvent(executionTime, callback);
+            _heap[_count] = new TimeEvent(handleId, executionTime, callback);
             HeapifyUp(_count);
             _count++;
         }
@@ -148,6 +152,17 @@ namespace Mayril.Internal
         }
 
         /// <summary>
+        /// a가 b보다 우선순위가 높은지 (먼저 실행되어야 하는지) 확인합니다.
+        /// ExecutionTime이 같으면 HandleId가 작은 것(먼저 등록된 것)이 우선입니다.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool HasHigherPriority(in TimeEvent a, in TimeEvent b)
+        {
+            return a.ExecutionTime < b.ExecutionTime ||
+                   (a.ExecutionTime == b.ExecutionTime && a.HandleId < b.HandleId);
+        }
+
+        /// <summary>
         /// 지정된 인덱스의 요소를 위로 올립니다. (Bubble Up)
         /// 부모보다 작은 경우 부모와 교환하며 올라갑니다.
         /// </summary>
@@ -162,8 +177,8 @@ namespace Mayril.Internal
                 int parentIndex = (index - 1) >> 1;
                 TimeEvent parent = _heap[parentIndex];
 
-                // Min Heap: 자식이 부모보다 크거나 같으면 중단
-                if (item.ExecutionTime >= parent.ExecutionTime)
+                // Min Heap: 자식이 부모보다 우선순위가 높지 않으면 중단
+                if (!HasHigherPriority(item, parent))
                 {
                     break;
                 }
@@ -193,29 +208,29 @@ namespace Mayril.Internal
                 int leftChildIndex = (index << 1) + 1;
                 int rightChildIndex = leftChildIndex + 1;
 
-                // 더 작은 자식 찾기
-                TimeEvent smallerChild = _heap[leftChildIndex];
-                int smallerChildIndex = leftChildIndex;
+                // 더 우선순위가 높은 자식 찾기
+                TimeEvent higherPriorityChild = _heap[leftChildIndex];
+                int higherPriorityChildIndex = leftChildIndex;
 
                 if (rightChildIndex < _count)
                 {
                     TimeEvent rightChild = _heap[rightChildIndex];
-                    if (rightChild.ExecutionTime < smallerChild.ExecutionTime)
+                    if (HasHigherPriority(rightChild, higherPriorityChild))
                     {
-                        smallerChild = rightChild;
-                        smallerChildIndex = rightChildIndex;
+                        higherPriorityChild = rightChild;
+                        higherPriorityChildIndex = rightChildIndex;
                     }
                 }
 
-                // Min Heap: 부모가 자식보다 작거나 같으면 중단
-                if (item.ExecutionTime <= smallerChild.ExecutionTime)
+                // Min Heap: 부모가 자식보다 우선순위가 높거나 같으면 중단
+                if (!HasHigherPriority(higherPriorityChild, item))
                 {
                     break;
                 }
 
-                // 작은 자식을 위로 올림
-                _heap[index] = smallerChild;
-                index = smallerChildIndex;
+                // 우선순위 높은 자식을 위로 올림
+                _heap[index] = higherPriorityChild;
+                index = higherPriorityChildIndex;
             }
 
             _heap[index] = item;
@@ -228,7 +243,6 @@ namespace Mayril.Internal
         private void Grow()
         {
             int newCapacity = _heap.Length * 2;
-
             if (newCapacity > MaxCapacity)
             {
                 newCapacity = MaxCapacity;
@@ -253,16 +267,15 @@ namespace Mayril.Internal
             {
                 int leftChild = (i << 1) + 1;
                 int rightChild = leftChild + 1;
-
-                if (leftChild < _count && _heap[i].ExecutionTime > _heap[leftChild].ExecutionTime)
+                if (leftChild < _count && HasHigherPriority(_heap[leftChild], _heap[i]))
                 {
-                    Debug.LogError($"[TimerEventMinHeap] Heap property violated at index {i}: parent {_heap[i].ExecutionTime} > left child {_heap[leftChild].ExecutionTime}");
+                    Debug.LogError($"[TimerEventMinHeap] Heap property violated at index {i}: parent ({_heap[i].ExecutionTime}, {_heap[i].HandleId}) < left child ({_heap[leftChild].ExecutionTime}, {_heap[leftChild].HandleId})");
                     return false;
                 }
 
-                if (rightChild < _count && _heap[i].ExecutionTime > _heap[rightChild].ExecutionTime)
+                if (rightChild < _count && HasHigherPriority(_heap[rightChild], _heap[i]))
                 {
-                    Debug.LogError($"[TimerEventMinHeap] Heap property violated at index {i}: parent {_heap[i].ExecutionTime} > right child {_heap[rightChild].ExecutionTime}");
+                    Debug.LogError($"[TimerEventMinHeap] Heap property violated at index {i}: parent ({_heap[i].ExecutionTime}, {_heap[i].HandleId}) < right child ({_heap[rightChild].ExecutionTime}, {_heap[rightChild].HandleId})");
                     return false;
                 }
             }
