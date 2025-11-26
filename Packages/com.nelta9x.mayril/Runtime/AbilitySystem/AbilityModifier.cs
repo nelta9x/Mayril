@@ -34,11 +34,6 @@ namespace Mayril.AbilitySystem
         public List<string> ModifierTags { get; set; } = new();
 
         /// <summary>
-        /// 스탯 변화들.
-        /// </summary>
-        public List<StatModifier> StatChanges { get; set; } = new();
-        
-        /// <summary>
         /// 활성화 여부.
         /// </summary>
         public bool IsEnabled { get; set; } = true;
@@ -70,7 +65,7 @@ namespace Mayril.AbilitySystem
         /// 지속시간.
         /// 지속시간 이후, 어빌리티는 제거됩니다.
         /// </summary>
-        public float DurationTime { get; set; }
+        public float Duration { get; set; }
         
         /// <summary>
         /// 지난시간.
