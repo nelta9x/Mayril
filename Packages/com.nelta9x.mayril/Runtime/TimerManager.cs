@@ -12,13 +12,13 @@ namespace Mayril
     {
         private readonly TimerEventMinHeap _postedEvents = new();
         private readonly HashSet<ulong> _cancelledHandles = new();
-        private double _elapsedTime;
+        private float _elapsedTime;
         private ulong _nextHandleId = 1;
 
         /// <summary>
         /// 흐른 시간.
         /// </summary>
-        public double ElapsedTime => _elapsedTime;
+        public float ElapsedTime => _elapsedTime;
 
         /// <summary>
         /// 현재 대기 중인 이벤트 개수.

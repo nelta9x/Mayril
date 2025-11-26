@@ -8,7 +8,6 @@ namespace Mayril.AbilitySystem
     public class AbilityModifierContainer
     {
         private readonly HashSet<AbilityModifier> _modifiers = new();
-        private readonly List<AbilityModifier> _tickableModifiers = new();
         private readonly Dictionary<IAbility, List<AbilityModifier>> _modifiersByAbility = new();
 
         /// <summary>
@@ -22,22 +21,12 @@ namespace Mayril.AbilitySystem
         public IEnumerable<AbilityModifier> Modifiers => _modifiers;
 
         /// <summary>
-        /// 틱을 받는 모디파어어들.
-        /// </summary>
-        public IEnumerable<AbilityModifier> TickableModifiers => _tickableModifiers;
-
-        /// <summary>
         /// 모디파이어를 추가합니다.
         /// </summary>
         public void AddModifier(AbilityModifier abilityModifier)
         {
             _modifiers.Add(abilityModifier);
-            if (abilityModifier.UseIntervalTick)
-            {
-                abilityModifier.TickRemaining = abilityModifier.TickInterval;
-                _tickableModifiers.Add(abilityModifier);
-            }
-
+   
             // 어빌리티별로 모디파이어 추가
             if (abilityModifier.Ability != null)
             {
@@ -56,7 +45,6 @@ namespace Mayril.AbilitySystem
         public void RemoveModifier(AbilityModifier abilityModifier)
         {
             _modifiers.Remove(abilityModifier);
-            _tickableModifiers.Remove(abilityModifier);
 
             // 어빌리티별 목록에서 제거
             if (abilityModifier.Ability != null && _modifiersByAbility.ContainsKey(abilityModifier.Ability))

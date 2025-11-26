@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using Mayril.StatSystem;
 
 namespace Mayril.AbilitySystem
 {
@@ -8,15 +7,22 @@ namespace Mayril.AbilitySystem
     /// </summary>
     public class AbilityModifier
     {
+        private double _creationTime;
+
         /// <summary>
         /// 모디파이어 이름.
         /// </summary>
         public string ModifierName { get; set; } = "";
-        
+
         /// <summary>
         /// 모디파이어의 어빌리티.
         /// </summary>
         public IAbility Ability { get; set; }
+        
+        /// <summary>
+        /// 모디파이어 어빌리티의 소유자. (타겟)
+        /// </summary>
+        public Entity Owner { get; set; }
         
         /// <summary>
         /// 증가시킬 어빌리티 모디파이어 태그들.
@@ -57,20 +63,30 @@ namespace Mayril.AbilitySystem
         public float TickInterval { get; set; }
         
         /// <summary>
-        /// 다음 틱까지 남은 시간.
-        /// </summary>
-        public float TickRemaining { get; set; }
-        
-        /// <summary>
         /// 지속시간.
         /// 지속시간 이후, 어빌리티는 제거됩니다.
         /// </summary>
         public float Duration { get; set; }
         
         /// <summary>
+        /// 생성된 시간.
+        /// </summary>
+        public float CreationTime { get; set; } = 0;
+        
+        /// <summary>
+        /// 남은 지속시간.
+        /// </summary>
+        public float RemainingDuration => Duration - ElapsedTime;
+
+        /// <summary>
         /// 지난시간.
         /// </summary>
-        public float ElapsedTime { get; set; }
+        public float ElapsedTime => Owner.OwningWorld.WorldTimerManager.ElapsedTime - CreationTime;
+        
+        /// <summary>
+        /// 남은 지속시간.
+        /// </summary>
+        public float RemainingTime => Duration > 0 ? Duration - ElapsedTime : 0f;
 
         /// <summary>
         /// 모디파이어가 생성될 때 호출됩니다.

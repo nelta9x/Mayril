@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 
 namespace Mayril.AbilitySystem
 {
@@ -7,19 +8,22 @@ namespace Mayril.AbilitySystem
     /// </summary>
     public class AbilityModifierManager
     {
+        private readonly TimerManager _timerManager;
         private readonly AbilityModifierContainer _modifiers = new();
         private readonly List<AbilityModifier> _tempModifierBuffer = new(8);
+        private readonly Dictionary<AbilityModifier, TimerHandle> _durationHandles = new();
+        private readonly Dictionary<AbilityModifier, TimerHandle> _intervalTickHandles = new();
+
+        public AbilityModifierManager(TimerManager timerManager)
+        {
+            _timerManager = timerManager ?? throw new ArgumentNullException(nameof(timerManager));
+        }
 
         /// <summary>
         /// 어빌리티 모디파이어들.
         /// </summary>
         public IEnumerable<AbilityModifier> Modifiers => _modifiers.Modifiers;
-        
-        /// <summary>
-        /// 틱을 받는 어빌리티 모디파이어들.
-        /// </summary>
-        public IEnumerable<AbilityModifier> TickableModifiers => _modifiers.TickableModifiers;
-        
+
         /// <summary>
         /// 모디파이어를 추가합니다.
         /// </summary>
@@ -35,6 +39,19 @@ namespace Mayril.AbilitySystem
 
             // 기존의 어빌리티들의 활성화 여부를 수정.
             UpdateExistingModifiersEnablerStack(modifier, isAdding: true);
+
+            // Duration 타이머 등록
+            if (modifier.Duration > 0)
+            {
+                var handle = _timerManager.PostEvent(modifier.Duration, () => RemoveModifier(modifier));
+                _durationHandles[modifier] = handle;
+            }
+
+            // IntervalTick 타이머 등록
+            if (modifier.UseIntervalTick && modifier.TickInterval > 0)
+            {
+                ScheduleNextIntervalTick(modifier);
+            }
         }
 
         /// <summary>
@@ -42,6 +59,8 @@ namespace Mayril.AbilitySystem
         /// </summary>
         public void RemoveModifier(AbilityModifier modifier)
         {
+            // 타이머 취소
+            CancelModifierTimers(modifier);
             if (modifier.IsEnabled)
             {
                 modifier.OnDisabled();
@@ -49,8 +68,6 @@ namespace Mayril.AbilitySystem
 
             _modifiers.RemoveModifier(modifier);
             modifier.OnDetached();
-
-            // 기존의 어빌리티들의 활성화 여부를 수정 (제거 시 반대로 적용).
             UpdateExistingModifiersEnablerStack(modifier, isAdding: false);
         }
 
@@ -60,29 +77,21 @@ namespace Mayril.AbilitySystem
         public void RemoveModifiers(IAbility ability)
         {
             _tempModifierBuffer.AddRange(_modifiers.GetModifiersByAbility(ability));
+            _modifiers.RemoveModifiersByAbility(ability);
             foreach (var modifier in _tempModifierBuffer)
             {
-                RemoveModifier(modifier);
-            }
-            
-            _tempModifierBuffer.Clear();
-        }
-
-        /// <summary>
-        /// 어빌리티 모디파이어들을 업데이트합니다.
-        /// </summary>
-        public void Update(float deltaTime)
-        {
-            foreach (var tickableModifier in _modifiers.TickableModifiers)
-            {
-                tickableModifier.TickRemaining -= deltaTime;
-                while (tickableModifier.TickRemaining <= 0)
-                {// deltaTime이 IntervalTick을 여러번 호출 가능한 시간 이후에 호출되었을 경우를 대비해,
-                 // 호출되었어야 하는 만큼 OnIntervalTick을 호출합니다.
-                    tickableModifier.OnIntervalTick();
-                    tickableModifier.TickRemaining += tickableModifier.TickInterval;
+                // 타이머 취소
+                CancelModifierTimers(modifier);
+                if (modifier.IsEnabled)
+                {
+                    modifier.OnDisabled();
                 }
+
+                modifier.OnDetached();
+                UpdateExistingModifiersEnablerStack(modifier, isAdding: false);
             }
+
+            _tempModifierBuffer.Clear();
         }
 
         /// <summary>
@@ -164,6 +173,52 @@ namespace Mayril.AbilitySystem
 
                 TryChangeModifierEnabledState(existingModifier, oldEnablerStack);
             }
+        }
+
+        /// <summary>
+        /// 모디파이어의 모든 타이머를 취소합니다.
+        /// </summary>
+        private void CancelModifierTimers(AbilityModifier modifier)
+        {
+            if (_durationHandles.TryGetValue(modifier, out var durationHandle))
+            {
+                _timerManager.CancelEvent(durationHandle);
+                _durationHandles.Remove(modifier);
+            }
+
+            if (_intervalTickHandles.TryGetValue(modifier, out var tickHandle))
+            {
+                _timerManager.CancelEvent(tickHandle);
+                _intervalTickHandles.Remove(modifier);
+            }
+        }
+
+        /// <summary>
+        /// 다음 IntervalTick을 예약합니다.
+        /// </summary>
+        private void ScheduleNextIntervalTick(AbilityModifier modifier)
+        {
+            var handle = _timerManager.PostEvent(modifier.TickInterval, () =>
+            {
+                // 모디파이어가 이미 제거된 경우 (타이머 취소와 콜백 실행 사이의 경합 상태 대비)
+                if (!_intervalTickHandles.Remove(modifier))
+                {
+                    return;
+                }
+
+                if (modifier.IsEnabled)
+                {
+                    modifier.OnIntervalTick();
+
+                    // 다음 틱 예약 (모디파이어가 아직 유효한 경우)
+                    if (modifier.UseIntervalTick && modifier.TickInterval > 0)
+                    {
+                        ScheduleNextIntervalTick(modifier);
+                    }
+                }
+            });
+
+            _intervalTickHandles[modifier] = handle;
         }
     }
 }
