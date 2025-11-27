@@ -65,7 +65,7 @@ namespace Mayril.AbilitySystem
         /// <summary>
         /// 발사체가 히트되었을 때 호출됩니다.
         /// </summary>
-        public void OnProjectileHitEntity(Entity projectileEntity);
+        public void OnProjectileHitEntity(Entity projectileEntity, Entity hitEntity);
 
         /// <summary>
         /// 발사체가 종료되었을 때 호출됩니다.
