@@ -18,7 +18,7 @@ namespace Mayril.StatSystem
         [SerializeField] private float value;
         private bool _isDirty;
         private ISerializationCallbackReceiver _serializationCallbackReceiverImplementation;
-        private readonly StatModifierContainer _modifiers = new();
+        private StatModifierContainer _modifiers = new();
 
         /// <summary>
         /// 값이 변경되었을 때 호출됩니다.
@@ -154,11 +154,7 @@ namespace Mayril.StatSystem
         /// </summary>
         public void OnAfterDeserialize()
         {
-            if (_modifiers == null)
-            {
-                return;
-            }
-            
+            _modifiers ??= new StatModifierContainer();
             RecalculateValue();
         }
     }
