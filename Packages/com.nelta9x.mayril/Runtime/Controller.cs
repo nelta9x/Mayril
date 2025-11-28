@@ -1,3 +1,4 @@
+using Unity.Netcode;
 using UnityEngine;
 
 namespace Mayril
@@ -31,11 +32,60 @@ namespace Mayril
         /// <summary>
         /// 컨트롤 할 엔티티를 설정합니다.
         /// </summary>
-        public virtual void Possess(Entity target)
+        public void Possess(Entity targetRef)
         {
-            if (target == null)
+            if (!IsServer)
             {
-                Debug.LogWarning("[Controller] Target is null.");
+                return;
+            }
+
+            PossessRpc(targetRef);
+        }
+
+        /// <summary>
+        /// 컨트롤할 엔티티가 설정되었을 때 호출됩니다.
+        /// 만약 파생 컨트롤러에서 컨트롤 할 엔티티를 거부할 경우, base 함수 호출을 하지 마세요.
+        /// </summary>
+        protected virtual void OnPossess(Entity target)
+        {
+            target.PossessedBy(this);
+            _possessedTarget = target;
+        }
+
+        /// <summary>
+        /// 컨트롤 중인 엔티티를 해제합니다.
+        /// </summary>
+        public void Unpossess()
+        {
+            if (!IsServer)
+            {
+                return;
+            }
+            
+            if (_possessedTarget == null)
+            {
+                return;
+            }
+
+            UnpossessRpc();
+        }
+
+        /// <summary>
+        /// 컨트롤 중인 엔티티가 성공적으로 해제되었을 때 호출됩니다.
+        /// </summary>
+        protected virtual void OnUnpossess(Entity unpossessedTarget)
+        {
+        }
+        
+        /// <summary>
+        /// (Rpc) 컨트롤할 엔티티를 설정합니다.
+        /// </summary>
+        [Rpc(SendTo.Everyone)]
+        private void PossessRpc(NetworkBehaviourReference targetRef)
+        {
+            if (!targetRef.TryGet(out Entity targetEntity))
+            {
+                Debug.LogWarning("[Controller] Target is not Entity.");
                 return;
             }
 
@@ -44,44 +94,25 @@ namespace Mayril
                 Debug.LogWarning("[Controller] Controller already has an entity. Unpossess first.");
                 return;
             }
-            
-            _possessedTarget = target;
-            OnPossess(target);
-            if (target)
-            {
-                // OnPossess 중에 Destroy 될 수 있으므로, null 체크 필수.
-                target.PossessedBy(this);   
-            }
+
+            OnPossess(targetEntity);
         }
-
-        /// <summary>
-        /// 컨트롤할 엔티티가 설정되었을 때 호출됩니다.
-        /// </summary>
-        protected abstract void OnPossess(Entity target);
-
+        
         /// <summary>
         /// 컨트롤 중인 엔티티를 해제합니다.
         /// </summary>
-        public virtual void Unpossess()
+        [Rpc(SendTo.Everyone)]
+        private void UnpossessRpc()
         {
             if (_possessedTarget == null)
             {
                 return;
             }
-            
+
             var oldTarget = _possessedTarget;
             _possessedTarget = null;
-            OnUnpossess();
-            if (oldTarget)
-            {
-                // OnUnpossess 중에 Destroy 될 수 있으므로, null 체크 필수.
-                oldTarget.Unpossessed();   
-            }
+            oldTarget.Unpossessed();
+            OnUnpossess(oldTarget);
         }
-
-        /// <summary>
-        /// 컨트롤 중인 엔티티가 성공적으로 해제되었을 때 호출됩니다.
-        /// </summary>
-        protected abstract void OnUnpossess();
     }
 }
