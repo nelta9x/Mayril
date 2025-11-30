@@ -18,7 +18,7 @@ namespace Mayril
         /// <summary>
         /// 컨트롤러에 의해 조종될 때 호출됩니다.
         /// </summary>
-        public override void PossessedBy(Controller controller)
+        public override void OnPossessedBy(Controller controller)
         {
         }
         
@@ -48,7 +48,7 @@ namespace Mayril
         /// </summary>
         protected virtual void OnPossess(Entity target)
         {
-            target.PossessedBy(this);
+            target.OnPossessedBy(this);
             _possessedTarget = target;
         }
 

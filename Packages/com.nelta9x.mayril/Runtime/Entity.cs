@@ -23,7 +23,7 @@ namespace Mayril
         /// <summary>
         /// 컨트롤러에 의해 조종될 때 호출됩니다.
         /// </summary>
-        public virtual void PossessedBy(Controller controller)
+        public virtual void OnPossessedBy(Controller controller)
         {
         }
         
@@ -48,15 +48,7 @@ namespace Mayril
         public virtual void Start()
         {
         }
-        
-        /// <summary>
-        /// 엔티티가 파괴될 때 호출됩니다.
-        /// </summary>
-        public override void OnDestroy()
-        {
-            base.OnDestroy();
-        }
-        
+
         /// <summary>
         /// 네트워크 스폰 시 호출됩니다.
         /// </summary>
@@ -73,6 +65,10 @@ namespace Mayril
         {
             EventBus<EntityDespawned>.Trigger(new EntityDespawned { DespawnedEntity = this });
             base.OnNetworkDespawn();
+            if (NetworkObject.IsSceneObject is true)
+            {// 씬 오브젝트는 Destroy 하면 안 되기 때문에, Active 상태만 false로 변경.
+                gameObject.SetActive(false);
+            }
         }
     }
 }
