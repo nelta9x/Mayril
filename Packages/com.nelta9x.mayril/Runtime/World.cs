@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Mayril.Events;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace Mayril
@@ -15,6 +16,7 @@ namespace Mayril
         [SerializeField] private WorldNetworkMode networkMode = WorldNetworkMode.Standalone;
         
         private GameInstance _owningGameInstance;
+        private NetworkManager _networkManager;
         private PlayMode _mode;
         private readonly HashSet<Entity> _entities = new(256);
         private readonly Dictionary<int, List<Entity>> _entitiesByLayer = new(8);
@@ -211,6 +213,7 @@ namespace Mayril
         private void Awake()
         {
             _owningGameInstance = GameInstance.Instance;
+            _networkManager = NetworkManager.Singleton;
         }
         
         /// <summary>
@@ -218,6 +221,26 @@ namespace Mayril
         /// </summary>
         private void Start()
         {
+            if (_networkManager == null)
+            {
+                NetworkMode = WorldNetworkMode.Standalone;
+            }
+            else
+            {
+                if (_networkManager.IsServer)
+                {
+                    NetworkMode = WorldNetworkMode.Host;
+                }
+                else if (_networkManager.IsClient)
+                {
+                    NetworkMode = WorldNetworkMode.Client;
+                }
+                else
+                {
+                    NetworkMode = WorldNetworkMode.Standalone;
+                }
+            }
+            
             _entities.Clear();
             RegisterEvents();
             SpawnModeIfNeeded();
