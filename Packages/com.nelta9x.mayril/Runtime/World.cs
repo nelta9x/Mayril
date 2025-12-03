@@ -214,6 +214,21 @@ namespace Mayril
         {
             _owningGameInstance = GameInstance.Instance;
             _networkManager = NetworkManager.Singleton;
+            RegisterEvents();
+            foreach (var entity in FindObjectsByType<Entity>(FindObjectsSortMode.None))
+            {
+                if (!entity.IsSpawned)
+                { // 스폰 시 EntitySpawned 이벤트를 통해 World에 추가될 것이기에 지금 추가하지 않음.
+                    continue;
+                }
+
+                if (entity.OwningWorld == this)
+                { // 이미 월드에 추가되어 있음.
+                    continue;
+                }
+
+                AddEntity(entity);
+            }
         }
         
         /// <summary>
@@ -241,25 +256,7 @@ namespace Mayril
                 }
             }
             
-            _entities.Clear();
-            RegisterEvents();
             SpawnModeIfNeeded();
-            var entities = FindObjectsByType<Entity>(FindObjectsSortMode.None);
-            foreach (var entity in entities)
-            {
-                if (!entity.IsSpawned)
-                { // 스폰 시 EntitySpawned 이벤트를 통해 World에 추가될 것이기에 지금 추가하지 않음.
-                    continue;
-                }
-
-                if (entity.OwningWorld == this)
-                { // 이미 월드에 추가되어 있음.
-                    continue;
-                }
-
-                AddEntity(entity);
-            }
-            
             Debug.Log($"[World] World started. (World: {name}, NetworkMode: {networkMode})");
             EventBus<WorldStarted>.Trigger(new WorldStarted
             {
