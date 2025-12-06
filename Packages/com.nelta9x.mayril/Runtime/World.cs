@@ -184,7 +184,10 @@ namespace Mayril
                 return;
             }
 
-            _mode.NetworkObject.Spawn(true);
+            if (!_mode.NetworkObject.IsSpawned)
+            {
+                _mode.NetworkObject.Spawn(true);
+            }
         }
 
         /// <summary>
