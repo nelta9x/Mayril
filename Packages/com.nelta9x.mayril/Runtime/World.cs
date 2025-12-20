@@ -237,11 +237,6 @@ namespace Mayril
             {
                 _mode = Instantiate(modePrefab);
                 _mode.OwningWorld = this;
-                if (!_mode.NetworkObject.IsSpawned)
-                {
-                    _mode.NetworkObject.Spawn(true);
-                }
-
                 _mode.SpawnGameState();
             }
         }
