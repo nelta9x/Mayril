@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using Mayril.Events;
 using Unity.Netcode;
 using UnityEngine;
@@ -22,6 +24,8 @@ namespace Mayril
         private readonly HashSet<Entity> _entities = new(256);
         private readonly Dictionary<int, List<Entity>> _entitiesByLayer = new(8);
         private readonly Dictionary<string, List<Entity>> _entitiesByTag = new(8);
+        private readonly List<WorldSystem> _worldSystems = new();
+        private readonly Dictionary<Type, WorldSystem> _worldSystemByType = new();
         private readonly TimerManager _timerManager = new();
         
         /// <summary>
@@ -62,6 +66,27 @@ namespace Mayril
         /// 월드의 타이머 관리자.
         /// </summary>
         public TimerManager WorldTimerManager => _timerManager;
+        
+        /// <summary>
+        /// 월드 시스템들.
+        /// </summary>
+        public IReadOnlyList<WorldSystem> WorldSystems => _worldSystems;
+
+        /// <summary>
+        /// 월드 시스템을 반환합니다.
+        /// </summary>
+        public WorldSystem GetWorldSystem(Type worldSystemType)
+        {
+            return _worldSystemByType.GetValueOrDefault(worldSystemType);
+        }
+        
+        /// <summary>
+        /// 월드 시스템을 반환합니다.
+        /// </summary>
+        public WorldSystem GetWorldSystem<T>() where T : WorldSystem
+        {
+            return GetWorldSystem(typeof(T));
+        }
 
         /// <summary>
         /// 특정 태그의 엔티티들을 반환합니다.
@@ -196,8 +221,38 @@ namespace Mayril
         /// </summary>
         private void Awake()
         {
-            _owningGameInstance = GameInstance.Instance;
             _networkManager = NetworkManager.Singleton;
+            if (_networkManager.IsServer)
+            {
+                NetworkMode = WorldNetworkMode.Host;
+            }
+            else if (_networkManager.IsClient)
+            {
+                NetworkMode = WorldNetworkMode.Client;
+            }
+            else
+            {
+                NetworkMode = WorldNetworkMode.Standalone;
+            }
+            
+            // 월드 시스템 생성.
+            var worldSystemTypes = AppDomain.CurrentDomain.GetAssemblies()
+                .SelectMany(assembly => assembly.GetTypes())
+                .Where(type => type.IsClass && !type.IsAbstract && type.IsSubclassOf(typeof(WorldSystem)));
+            foreach (var worldSystemType in worldSystemTypes)
+            {
+                var worldSystem = (WorldSystem)Activator.CreateInstance(worldSystemType);
+                if (!worldSystem.ShouldCreate(this))
+                {
+                    continue;
+                }
+
+                _worldSystems.Add(worldSystem);
+                _worldSystemByType.Add(worldSystemType, worldSystem);
+            }
+
+            _owningGameInstance = GameInstance.Instance;
+            
             RegisterEvents();
             foreach (var entity in FindObjectsByType<Entity>(FindObjectsSortMode.None))
             {
@@ -213,31 +268,20 @@ namespace Mayril
 
                 AddEntity(entity);
             }
-            
-            if (_networkManager.IsServer)
-            {
-                NetworkMode = WorldNetworkMode.Host;
-            }
-            else if (_networkManager.IsClient)
-            {
-                NetworkMode = WorldNetworkMode.Client;
-            }
-            else
-            {
-                NetworkMode = WorldNetworkMode.Standalone;
-            }
-            
-            if (modePrefab == null)
-            {
-                return;
-            }
 
             bool shouldSpawnMode = NetworkMode != WorldNetworkMode.Client;
             if (shouldSpawnMode)
             {
-                _mode = Instantiate(modePrefab);
+                if (modePrefab == null)
+                {
+                    _mode = new GameObject("PlayMode_AutoCreated").AddComponent<PlayMode>();
+                }
+                else
+                {
+                    _mode = Instantiate(modePrefab);
+                }
+                
                 _mode.OwningWorld = this;
-                _mode.SpawnGameState();
             }
         }
         
@@ -258,7 +302,12 @@ namespace Mayril
         /// </summary>
         public void Update()
         {
-            _timerManager.Update(Time.deltaTime);
+            float deltaTime = Time.deltaTime;
+            _timerManager.Update(deltaTime);
+            foreach (var worldSystem in _worldSystems)
+            {
+                worldSystem.Update(deltaTime);
+            }
         }
 
         /// <summary>
