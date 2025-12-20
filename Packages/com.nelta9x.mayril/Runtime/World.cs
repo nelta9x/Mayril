@@ -18,6 +18,7 @@ namespace Mayril
         private GameInstance _owningGameInstance;
         private NetworkManager _networkManager;
         private PlayMode _mode;
+        private GameState _gameState;
         private readonly HashSet<Entity> _entities = new(256);
         private readonly Dictionary<int, List<Entity>> _entitiesByLayer = new(8);
         private readonly Dictionary<string, List<Entity>> _entitiesByTag = new(8);
@@ -39,8 +40,18 @@ namespace Mayril
 
         /// <summary>
         /// 월드 플레이 모드.
+        /// 플레이 모드는 서버에서만 스폰됩니다.
         /// </summary>
         public PlayMode Mode => _mode;
+
+        /// <summary>
+        /// 게임 스테이트.
+        /// </summary>
+        public GameState GameState
+        {
+            get => _gameState;
+            set => _gameState = value;
+        }
 
         /// <summary>
         /// 모든 엔티티들.
@@ -159,36 +170,6 @@ namespace Mayril
             _entitiesByTag[entity.tag].Remove(entity);
             _entitiesByLayer[entity.gameObject.layer].Remove(entity);
         }
-        
-        /// <summary>
-        /// 필요 시 모드를 스폰합니다.
-        /// </summary>
-        private void SpawnModeIfNeeded()
-        {
-            bool shouldSpawnMode = networkMode is WorldNetworkMode.Host or WorldNetworkMode.Standalone;
-            if (!shouldSpawnMode)
-            {
-                return;
-            }
-
-            if (modePrefab == null)
-            {
-                return;
-            }
-            
-            _mode = Instantiate(modePrefab);
-            _mode.OwningWorld = this;
-            if (_mode.NetworkObject == null)
-            {
-                Debug.LogError("[World] Mode prefab does not have a NetworkObject component.");
-                return;
-            }
-
-            if (!_mode.NetworkObject.IsSpawned)
-            {
-                _mode.NetworkObject.Spawn(true);
-            }
-        }
 
         /// <summary>
         /// 이벤트들을 등록합니다.
@@ -232,6 +213,37 @@ namespace Mayril
 
                 AddEntity(entity);
             }
+            
+            if (_networkManager.IsServer)
+            {
+                NetworkMode = WorldNetworkMode.Host;
+            }
+            else if (_networkManager.IsClient)
+            {
+                NetworkMode = WorldNetworkMode.Client;
+            }
+            else
+            {
+                NetworkMode = WorldNetworkMode.Standalone;
+            }
+            
+            if (modePrefab == null)
+            {
+                return;
+            }
+
+            bool shouldSpawnMode = NetworkMode != WorldNetworkMode.Client;
+            if (shouldSpawnMode)
+            {
+                _mode = Instantiate(modePrefab);
+                _mode.OwningWorld = this;
+                if (!_mode.NetworkObject.IsSpawned)
+                {
+                    _mode.NetworkObject.Spawn(true);
+                }
+
+                _mode.SpawnGameState();
+            }
         }
         
         /// <summary>
@@ -239,27 +251,6 @@ namespace Mayril
         /// </summary>
         private void Start()
         {
-            if (_networkManager == null)
-            {
-                NetworkMode = WorldNetworkMode.Standalone;
-            }
-            else
-            {
-                if (_networkManager.IsServer)
-                {
-                    NetworkMode = WorldNetworkMode.Host;
-                }
-                else if (_networkManager.IsClient)
-                {
-                    NetworkMode = WorldNetworkMode.Client;
-                }
-                else
-                {
-                    NetworkMode = WorldNetworkMode.Standalone;
-                }
-            }
-            
-            SpawnModeIfNeeded();
             Debug.Log($"[World] World started. (World: {name}, NetworkMode: {networkMode})");
             EventBus<WorldStarted>.Trigger(new WorldStarted
             {

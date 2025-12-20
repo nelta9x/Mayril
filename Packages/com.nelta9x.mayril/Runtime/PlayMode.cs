@@ -10,8 +10,11 @@ namespace Mayril
     /// </summary>
     public class PlayMode : Entity
     {
+        [SerializeField] private GameState gameStatePrefab;
+        [SerializeField] private PlayerState playerStatePrefab;
+
         private NetworkManager _networkManager;
-        
+  
         /// <summary>
         /// 모드가 초기화 될 때 호출됩니다.
         /// </summary>
@@ -40,6 +43,26 @@ namespace Mayril
         }
 
         /// <summary>
+        /// 게임 스테이트를 스폰합니다.
+        /// 이 메소드는 <see cref="World"/>에 의해 호출됩니다.
+        /// </summary>
+        public void SpawnGameState()
+        {
+            GameState newGameState;
+            if (gameStatePrefab == null)
+            {
+                newGameState = new GameObject("GameState_AutoCreated").AddComponent<GameState>();
+            }
+            else
+            {
+                newGameState = Instantiate(gameStatePrefab);
+            }
+            
+            OwningWorld.GameState = newGameState;
+            newGameState.NetworkObject.Spawn(true);
+        }
+
+        /// <summary>
         /// 플레이어가 접속을 요청할 때 호출됩니다.
         /// </summary>
         public virtual void OnPlayerEnterRequested(NetworkClient client)
@@ -48,9 +71,22 @@ namespace Mayril
 
         /// <summary>
         /// 플레이어가 접속했을 때 호출됩니다.
+        /// 이 메소드를 오버라이드 시, 반드시 base.OnPlayerEntered() 를 호출해야 합니다.
         /// </summary>
         public virtual void OnPlayerEntered(ulong clientId, NetworkClient client)
         {
+            PlayerState newPlayerState;
+            if (playerStatePrefab == null)
+            {
+                newPlayerState = new GameObject($"PlayerState_AutoCreated_{clientId}").AddComponent<PlayerState>();
+            }
+            else
+            {
+                newPlayerState = Instantiate(playerStatePrefab);
+            }
+
+            newPlayerState.PlayerClientId = clientId;
+            newPlayerState.NetworkObject.Spawn(true);
         }
 
         /// <summary>
