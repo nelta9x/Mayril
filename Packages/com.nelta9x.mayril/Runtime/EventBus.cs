@@ -57,7 +57,24 @@ namespace Mayril
                 _isFrontSubscribersDirty = true;   
             }
         }
+
+        /// <summary>
+        /// 모든 정적 구독자 컬렉션과 상태를 초기 상태로 재설정합니다.
+        /// 이벤트 구독자 리스트를 초기화하고, 동기화 상태 플래그를 리셋합니다.
+        /// </summary>
+        public static void Reset()
+        {
+            _frontSubscribers.Clear();
+            _backSubscribers.Clear();
+            _isFrontSubscribersDirty = true;
+        }
         
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void SubsystemRegistrationReset()
+        {
+            Reset();
+        }
+
         /// <summary>
         /// <see cref="_frontSubscribers"/> 가 변경되었는지 확인하고,
         /// 변경되었을 시 <see cref="_backSubscribers"/> 를 그에 맞춰 동기화합니다.
