@@ -68,12 +68,6 @@ namespace Mayril
             _backSubscribers.Clear();
             _isFrontSubscribersDirty = true;
         }
-        
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void SubsystemRegistrationReset()
-        {
-            Reset();
-        }
 
         /// <summary>
         /// <see cref="_frontSubscribers"/> 가 변경되었는지 확인하고,
