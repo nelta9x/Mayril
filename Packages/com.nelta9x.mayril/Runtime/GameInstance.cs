@@ -81,7 +81,6 @@ namespace Mayril
         private void OnSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             Debug.Log($"[GameInstance] Scene loaded. (Scene: {scene.name})");
-            _ = GetOrCreateWorld();
         }
 
         /// <summary>
@@ -90,21 +89,6 @@ namespace Mayril
         private void OnSceneUnloaded(Scene scene)
         {
             Debug.Log($"[GameInstance] Scene unloaded. (Scene: {scene.name})");
-        }
-
-        /// <summary>
-        /// 월드를 씬에서 가져오거나, 필요 시 생성합니다.
-        /// </summary>
-        private World GetOrCreateWorld()
-        {
-            var world = FindFirstObjectByType<World>();
-            if (!world)
-            {
-                var worldObject = new GameObject("World_AutoCreated");
-                world = worldObject.AddComponent<World>();
-            }
-
-            return world;
         }
 
         /// <summary>
