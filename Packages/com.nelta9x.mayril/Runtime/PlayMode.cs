@@ -43,26 +43,6 @@ namespace Mayril
         }
 
         /// <summary>
-        /// 게임 스테이트를 스폰합니다.
-        /// 이 메소드는 <see cref="World"/>에 의해 호출됩니다.
-        /// </summary>
-        public void SpawnGameState()
-        {
-            GameState newGameState;
-            if (gameStatePrefab == null)
-            {
-                newGameState = new GameObject("GameState_AutoCreated").AddComponent<GameState>();
-            }
-            else
-            {
-                newGameState = Instantiate(gameStatePrefab);
-            }
-            
-            OwningWorld.GameState = newGameState;
-            newGameState.NetworkObject.Spawn(true);
-        }
-
-        /// <summary>
         /// 플레이어가 접속을 요청할 때 호출됩니다.
         /// </summary>
         public virtual void OnPlayerEnterRequested(NetworkClient client)
@@ -78,7 +58,11 @@ namespace Mayril
             PlayerState newPlayerState;
             if (playerStatePrefab == null)
             {
-                newPlayerState = new GameObject($"PlayerState_AutoCreated_{clientId}").AddComponent<PlayerState>();
+                var newGameObject = new GameObject("PlayerState_AutoCreated");
+                newGameObject.SetActive(false);
+                newGameObject.AddComponent<NetworkObject>();
+                newPlayerState = newGameObject.AddComponent<PlayerState>();
+                newGameObject.SetActive(true);
             }
             else
             {
@@ -105,11 +89,13 @@ namespace Mayril
             {
                 return;
             }
-            
+
+            _networkManager.OnServerStarted += OnServerStarted;
+            _networkManager.OnServerStopped += OnServerStopped;
             _networkManager.OnClientConnectedCallback += OnClientConnected;
             _networkManager.OnClientDisconnectCallback += OnClientDisconnected;
         }
-        
+
         /// <summary>
         /// 네트워크 매니저 콜백을 해제합니다.
         /// </summary>
@@ -120,8 +106,50 @@ namespace Mayril
                 return;
             }
 
+            _networkManager.OnServerStarted -= OnServerStarted;
+            _networkManager.OnServerStopped -= OnServerStopped;
             _networkManager.OnClientConnectedCallback -= OnClientConnected;
             _networkManager.OnClientDisconnectCallback -= OnClientDisconnected;
+        }
+        
+        /// <summary>
+        /// 게임 스테이트를 스폰합니다.
+        /// </summary>
+        private void SpawnGameState()
+        {
+            GameState newGameState;
+            if (gameStatePrefab == null)
+            {
+                var newGameObject = new GameObject("GameState_AutoCreated");
+                newGameObject.SetActive(false);
+                newGameObject.AddComponent<NetworkObject>();
+                newGameState = newGameObject.AddComponent<GameState>();
+                newGameObject.SetActive(true);
+            }
+            else
+            {
+                newGameState = Instantiate(gameStatePrefab);
+            }
+            
+            OwningWorld.GameState = newGameState;
+            newGameState.NetworkObject.Spawn(true);
+        }
+        
+        /// <summary>
+        /// 서버가 시작되었을 때 호출됩니다.
+        /// </summary>
+        private void OnServerStarted()
+        {
+            Debug.Log("[PlayMode] Server started.");
+            SpawnGameState();
+        }
+
+        /// <summary>
+        /// 서버가 중단되었을 때 호출됩니다.
+        /// </summary>
+        private void OnServerStopped(bool isGraceful)
+        {
+            Debug.Log($"[PlayMode] Server stopped. (IsGraceful: {isGraceful})");
         }
 
         /// <summary>
