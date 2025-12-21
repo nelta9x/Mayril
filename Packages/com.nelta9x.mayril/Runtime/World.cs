@@ -222,6 +222,12 @@ namespace Mayril
         private void Awake()
         {
             _networkManager = NetworkManager.Singleton;
+            if (_networkManager == null)
+            {
+                Debug.LogError("[World] NetworkManager is not found.");
+                return;
+            }
+
             if (_networkManager.IsServer)
             {
                 NetworkMode = WorldNetworkMode.Host;
@@ -274,7 +280,12 @@ namespace Mayril
             {
                 if (modePrefab == null)
                 {
-                    _mode = new GameObject("PlayMode_AutoCreated").AddComponent<PlayMode>();
+                    var newGameObject = new GameObject("PlayMode_AutoCreated");
+                    newGameObject.SetActive(false);
+                    newGameObject.AddComponent<NetworkObject>();
+                    _mode = newGameObject.AddComponent<PlayMode>();
+                    _mode.NetworkObject.SpawnWithObservers = false;
+                    newGameObject.SetActive(true);
                 }
                 else
                 {
