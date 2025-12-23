@@ -61,6 +61,11 @@ namespace Mayril
                 return;
             }
 
+            if (_owningWorld == null)
+            {
+                Debug.LogError($"[Entity] OwningWorld is not found. (name: {name})");
+            }
+
             if (!_owningWorld.didStart)
             {
                 // 아직 월드가 시작되지 않음.
