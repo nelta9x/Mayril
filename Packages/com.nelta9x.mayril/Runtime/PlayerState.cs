@@ -37,6 +37,20 @@ namespace Mayril
         }
 
         /// <summary>
+        /// 플레이가 가능해졌을 때 호출됩니다.
+        /// </summary>
+        protected override void BeginPlay()
+        {
+        }
+
+        /// <summary>
+        /// 플레이가 종료되었을 때 호출됩니다.
+        /// </summary>
+        protected override void EndPlay()
+        {
+        }
+
+        /// <summary>
         /// 네트워크 스폰 시 호출됩니다.
         /// 이 메소드를 오버라이드 시, 반드시 base.OnNetworkSpawn()를 호출해야 합니다.
         /// </summary>

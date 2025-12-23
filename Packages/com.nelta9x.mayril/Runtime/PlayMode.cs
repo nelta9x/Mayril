@@ -14,15 +14,6 @@ namespace Mayril
         [SerializeField] private PlayerState playerStatePrefab;
 
         private NetworkManager _networkManager;
-  
-        /// <summary>
-        /// 모드가 초기화 될 때 호출됩니다.
-        /// </summary>
-        public override void Awake()
-        {
-            base.Awake();
-            _networkManager = NetworkManager.Singleton;
-        }
 
         /// <summary>
         /// 모드가 스폰될 때 호출됩니다.
@@ -78,6 +69,30 @@ namespace Mayril
         /// </summary>
         public virtual void OnPlayerLeft(ulong clientId)
         {
+        }
+        
+        /// <summary>
+        /// 플레이가 가능해졌을 때 호출됩니다.
+        /// </summary>
+        protected override void BeginPlay()
+        {
+        }
+
+        /// <summary>
+        /// 플레이가 종료되었을 때 호출됩니다.
+        /// </summary>
+        protected override void EndPlay()
+        {
+            throw new System.NotImplementedException();
+        }
+        
+        /// <summary>
+        /// 모드가 초기화 될 때 호출됩니다.
+        /// </summary>
+        protected override void Awake()
+        {
+            base.Awake();
+            _networkManager = NetworkManager.Singleton;
         }
 
         /// <summary>

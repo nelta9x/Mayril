@@ -51,7 +51,7 @@ namespace Mayril
             SceneManager.sceneLoaded += OnSceneLoaded;
             SceneManager.sceneUnloaded += OnSceneUnloaded;
         }
-
+        
         /// <summary>
         /// 게임 인스턴스가 비활성화 될 때 호출됩니다.
         /// </summary>

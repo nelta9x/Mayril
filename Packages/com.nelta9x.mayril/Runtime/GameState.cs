@@ -40,9 +40,10 @@ namespace Mayril
         {
             _playerStates.Remove(playerState);
         }
-
+        
         /// <summary>
         /// 네트워크 스폰 시 호출됩니다.
+        /// 이 메소드를 재정의 시, 반드시 base.OnNetworkSpawn()를 호출해야 합니다.
         /// </summary>
         public override void OnNetworkSpawn()
         {
@@ -52,11 +53,36 @@ namespace Mayril
 
         /// <summary>
         /// 네트워크 디스폰 시 호출됩니다.
+        /// 이 메소드를 재정의 시, 반드시 base.OnNetworkDespawn()를 호출해야 합니다.
         /// </summary>
         public override void OnNetworkDespawn()
         {
-            OwningWorld.GameState = null;
             base.OnNetworkDespawn();
+            OwningWorld.GameState = null;
+        }
+
+        /// <summary>
+        /// 플레이 가능해졌을 때 호출됩니다.
+        /// </summary>
+        protected override void BeginPlay()
+        {
+        }
+
+        /// <summary>
+        /// 플레이가 종료되었을 때 호출됩니다.
+        /// </summary>
+        protected override void EndPlay()
+        {
+        }
+        
+        /// <summary>
+        /// (클라이언트 전용) 클라이언트에서 네트워크 세션 동기화가 완료되었을 때 호출됩니다.
+        /// 이 메소드를 재정의 시, 반드시 base.OnNetworkSessionSynchronized()를 호출해야 합니다.
+        /// </summary>
+        protected override void OnNetworkSessionSynchronized()
+        {
+            OwningWorld.IsNetworkSessionSynchronized = true;
+            base.OnNetworkSessionSynchronized();
         }
     }
 }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using Mayril.Events;
 using Unity.Netcode;
 using UnityEngine;
@@ -17,6 +16,7 @@ namespace Mayril
         [SerializeField] private PlayMode modePrefab;
         [SerializeField] private WorldNetworkMode networkMode = WorldNetworkMode.Standalone;
         
+        private bool _isNetworkSessionSynchronized;
         private GameInstance _owningGameInstance;
         private NetworkManager _networkManager;
         private PlayMode _mode;
@@ -32,6 +32,11 @@ namespace Mayril
         /// 게임 인스턴스.
         /// </summary>
         public GameInstance OwningGameInstance => _owningGameInstance;
+        
+        /// <summary>
+        /// 월드가 네트워크 세션 동기화가 완료되었는지 여부.
+        /// </summary>
+        public bool IsNetworkSessionSynchronized { get; set; }
 
         /// <summary>
         /// 월드의 네트워크 모드.
@@ -129,22 +134,22 @@ namespace Mayril
         /// <summary>
         /// 엔티티가 시작될 때 호출됩니다.
         /// </summary>
-        private void OnEntitySpawned(EntitySpawned message)
+        private void OnEntityPlayStarted(EntityPlayStarted message)
         {
-            if (_entities.Contains(message.SpawnedEntity))
+            if (_entities.Contains(message.StartedEntity))
             {
                 return;
             }
 
-            AddEntity(message.SpawnedEntity);
+            AddEntity(message.StartedEntity);
         }
         
         /// <summary>
         /// 엔티티가 파괴될 때 호출됩니다.
         /// </summary>
-        private void OnEntityDespawned(EntityDespawned message)
+        private void OnEntityPlayEnded(EntityPlayEnded message)
         {
-            RemoveEntity(message.DespawnedEntity);
+            RemoveEntity(message.EndedEntity);
         }
         
         /// <summary>
@@ -202,8 +207,8 @@ namespace Mayril
         private void RegisterEvents()
         {
             EventBus<EntityAwakened>.Register(OnEntityAwakened);
-            EventBus<EntitySpawned>.Register(OnEntitySpawned);
-            EventBus<EntityDespawned>.Register(OnEntityDespawned);
+            EventBus<EntityPlayStarted>.Register(OnEntityPlayStarted);
+            EventBus<EntityPlayEnded>.Register(OnEntityPlayEnded);
         }
         
         /// <summary>
@@ -212,8 +217,8 @@ namespace Mayril
         private void UnregisterEvents()
         {
             EventBus<EntityAwakened>.Unregister(OnEntityAwakened);
-            EventBus<EntitySpawned>.Unregister(OnEntitySpawned);
-            EventBus<EntityDespawned>.Unregister(OnEntityDespawned);
+            EventBus<EntityPlayStarted>.Unregister(OnEntityPlayStarted);
+            EventBus<EntityPlayEnded>.Unregister(OnEntityPlayEnded);
         }
 
         /// <summary>
@@ -224,11 +229,9 @@ namespace Mayril
             _networkManager = NetworkManager.Singleton;
             if (_networkManager == null)
             {
-                Debug.LogError("[World] NetworkManager is not found.");
-                return;
+                NetworkMode = WorldNetworkMode.Standalone;
             }
-
-            if (_networkManager.IsServer)
+            else if (_networkManager.IsServer)
             {
                 NetworkMode = WorldNetworkMode.Host;
             }
