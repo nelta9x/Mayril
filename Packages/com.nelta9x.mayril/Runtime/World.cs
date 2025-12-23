@@ -11,7 +11,7 @@ namespace Mayril
     /// 게임의 월드를 표현하는 클래스입니다.
     /// 씬 단위로 고유하며, 모든 엔티티들을 관리하는 컨테이너입니다.
     /// </summary>
-    [DefaultExecutionOrder(0)]
+    [DefaultExecutionOrder(-1)]
     public class World : MonoBehaviour
     {
         [SerializeField] private PlayMode modePrefab;
