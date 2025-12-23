@@ -16,6 +16,7 @@ namespace Mayril
         [SerializeField] private PlayMode modePrefab;
         [SerializeField] private WorldNetworkMode networkMode = WorldNetworkMode.Standalone;
         
+        private static World _instance;
         private bool _isNetworkSessionSynchronized;
         private GameInstance _owningGameInstance;
         private NetworkManager _networkManager;
@@ -27,16 +28,26 @@ namespace Mayril
         private readonly List<WorldSystem> _worldSystems = new();
         private readonly Dictionary<Type, WorldSystem> _worldSystemByType = new();
         private readonly TimerManager _timerManager = new();
-        
+
+        /// <summary>
+        /// 월드 인스턴스.
+        /// 월드는 씬 당 하나만 존재할 수 있습니다.
+        /// </summary>
+        public static World Instance => _instance;
+
         /// <summary>
         /// 게임 인스턴스.
         /// </summary>
         public GameInstance OwningGameInstance => _owningGameInstance;
-        
+
         /// <summary>
         /// 월드가 네트워크 세션 동기화가 완료되었는지 여부.
         /// </summary>
-        public bool IsNetworkSessionSynchronized { get; set; }
+        public bool IsNetworkSessionSynchronized
+        {
+            get => _isNetworkSessionSynchronized;
+            internal set => _isNetworkSessionSynchronized = value;
+        }
 
         /// <summary>
         /// 월드의 네트워크 모드.
@@ -128,46 +139,15 @@ namespace Mayril
         }
         
         /// <summary>
-        /// 엔티티가 깨어났을 때 호출됩니다.
-        /// </summary>
-        private void OnEntityAwakened(EntityAwakened message)
-        {
-            message.AwakenedEntity.OwningWorld = this;
-        }
-
-        /// <summary>
-        /// 엔티티가 시작될 때 호출됩니다.
-        /// </summary>
-        private void OnEntityPlayStarted(EntityPlayStarted message)
-        {
-            if (_entities.Contains(message.StartedEntity))
-            {
-                return;
-            }
-
-            AddEntity(message.StartedEntity);
-        }
-        
-        /// <summary>
-        /// 엔티티가 파괴될 때 호출됩니다.
-        /// </summary>
-        private void OnEntityPlayEnded(EntityPlayEnded message)
-        {
-            RemoveEntity(message.EndedEntity);
-        }
-        
-        /// <summary>
         /// 엔티티를 추가합니다.
         /// </summary>
-        private void AddEntity(Entity entity)
+        public void AddEntity(Entity entity)
         {
             if (!_entities.Add(entity))
             {
                 Debug.LogWarning($"[World] Entity was already added to world. (Entity: {entity.name})");
                 return;
             }
-            
-            entity.OwningWorld = this;
             
             if (!_entitiesByTag.TryGetValue(entity.tag, out var taggedEntities))
             {
@@ -188,7 +168,7 @@ namespace Mayril
         /// <summary>
         /// 엔티티를 제거합니다.
         /// </summary>
-        private void RemoveEntity(Entity entity)
+        public void RemoveEntity(Entity entity)
         {
             if (entity == null)
             {
@@ -206,36 +186,25 @@ namespace Mayril
         }
 
         /// <summary>
-        /// 이벤트들을 등록합니다.
-        /// </summary>
-        private void RegisterEvents()
-        {
-            EventBus<EntityAwakened>.Register(OnEntityAwakened);
-            EventBus<EntityPlayStarted>.Register(OnEntityPlayStarted);
-            EventBus<EntityPlayEnded>.Register(OnEntityPlayEnded);
-        }
-        
-        /// <summary>
-        /// 이벤트들의 등록을 해제합니다.
-        /// </summary>
-        private void UnregisterEvents()
-        {
-            EventBus<EntityAwakened>.Unregister(OnEntityAwakened);
-            EventBus<EntityPlayStarted>.Unregister(OnEntityPlayStarted);
-            EventBus<EntityPlayEnded>.Unregister(OnEntityPlayEnded);
-        }
-
-        /// <summary>
         /// 초기화 시 호출됩니다.
         /// </summary>
         private void Awake()
         {
+            if (_instance != null)
+            {
+                Debug.LogWarning("[World] Multiple worlds are not allowed.");
+                Destroy(gameObject);
+                return;
+            }
+
             _networkManager = NetworkManager.Singleton;
             if (_networkManager == null)
             {
-                NetworkMode = WorldNetworkMode.Standalone;
+                Debug.LogError("[World] NetworkManager is not found.");
+                return;
             }
-            else if (_networkManager.IsServer)
+
+            if (_networkManager.IsServer)
             {
                 NetworkMode = WorldNetworkMode.Host;
             }
@@ -265,8 +234,6 @@ namespace Mayril
             }
 
             _owningGameInstance = GameInstance.Instance;
-            
-            RegisterEvents();
             foreach (var entity in FindObjectsByType<Entity>(FindObjectsSortMode.None))
             {
                 if (!entity.IsSpawned)
@@ -337,7 +304,8 @@ namespace Mayril
             {
                 DestroyedWorld = this
             });
-            UnregisterEvents();
+            
+            _instance = null;
             Debug.Log($"[World] World destroyed. (World: {name}, NetworkMode: {networkMode})");
         }
     }

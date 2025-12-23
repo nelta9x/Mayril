@@ -15,12 +15,8 @@ namespace Mayril
         /// <summary>
         /// 엔티티가 소속된 월드.
         /// </summary>
-        public World OwningWorld
-        {
-            get => _owningWorld;
-            set => _owningWorld = value;
-        }
-        
+        public World OwningWorld => _owningWorld;
+
         /// <summary>
         /// 엔티티가 플레이 가능해졌는지 여부.
         /// </summary>
@@ -106,7 +102,7 @@ namespace Mayril
             // 예)
             // - 서버: 네트워크 오브젝트 스폰 완료,
             // - 클라이언트: 세션 동기화 완료 시
-            EventBus<EntityAwakened>.Trigger(new EntityAwakened { AwakenedEntity = this });
+            _owningWorld = World.Instance;
             enabled = false; // BeginPlay 호출 전까진 Tick이 돌지 못하도록 보장.
             if (!_owningWorld.didStart)
             {
@@ -141,6 +137,7 @@ namespace Mayril
         /// </summary>
         private void InternalBeginPlay()
         {
+            _owningWorld.AddEntity(this);
             BeginPlay();
             _hasBegunPlay = true;
             enabled = true;
@@ -158,6 +155,7 @@ namespace Mayril
             EndPlay();
             _hasBegunPlay = false;
             enabled = false;
+            _owningWorld.RemoveEntity(this);
             EventBus<EntityPlayEnded>.Trigger(new EntityPlayEnded()
             {
                 EndedEntity = this
