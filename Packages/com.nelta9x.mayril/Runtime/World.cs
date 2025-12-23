@@ -197,6 +197,7 @@ namespace Mayril
                 return;
             }
 
+            _instance = this;
             _networkManager = NetworkManager.Singleton;
             if (_networkManager == null)
             {
