@@ -51,7 +51,11 @@ namespace Mayril
         /// 월드 플레이 모드.
         /// 플레이 모드는 서버에서만 스폰됩니다.
         /// </summary>
-        public PlayMode Mode => _mode;
+        public PlayMode Mode
+        {
+            get => _mode;
+            set => _mode = value;
+        }
 
         /// <summary>
         /// 게임 스테이트.
@@ -294,8 +298,8 @@ namespace Mayril
                 {
                     _mode = Instantiate(modePrefab);
                 }
-                
-                _mode.OwningWorld = this;
+
+                _mode.NetworkObject.Spawn(true);
             }
         }
         

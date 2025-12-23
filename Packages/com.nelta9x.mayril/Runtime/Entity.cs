@@ -58,9 +58,20 @@ namespace Mayril
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
+            if (_hasBegunPlay)
+            {// 이미 플레이 됨.
+                return;
+            }
+
+            if (!_owningWorld.didStart)
+            {
+                // 아직 월드가 시작되지 않음.
+                // 이 경우 WorldStarted 메시지를 받았을 때, BeginPlay를 실행합니다.
+                return;
+            }
             
-            // 엔티티가 스폰 되었더라도, 모든 동기화가 완료되기 전까지는 BeginPlay를 호출하지 않고 미룹니다.
-            if (!_hasBegunPlay && (IsServer || _owningWorld.IsNetworkSessionSynchronized))
+            // 클라이언트에서 엔티티가 스폰 되었더라도, 모든 동기화가 완료되기 전까지는 BeginPlay를 호출하지 않고 미룹니다.
+            if (IsServer || _owningWorld.IsNetworkSessionSynchronized)
             {
                 InternalBeginPlay();
             }
@@ -97,6 +108,19 @@ namespace Mayril
             // - 클라이언트: 세션 동기화 완료 시
             EventBus<EntityAwakened>.Trigger(new EntityAwakened { AwakenedEntity = this });
             enabled = false; // BeginPlay 호출 전까진 Tick이 돌지 못하도록 보장.
+            if (!_owningWorld.didStart)
+            {
+                EventBus<WorldStarted>.Register(OnWorldStarted);   
+            }
+        }
+
+        /// <summary>
+        /// 엔티티 파괴 시 호출됩니다.
+        /// </summary>
+        public override void OnDestroy()
+        {
+            EventBus<WorldStarted>.Unregister(OnWorldStarted);
+            base.OnDestroy();
         }
 
         /// <summary>
@@ -106,7 +130,7 @@ namespace Mayril
         protected override void OnNetworkSessionSynchronized()
         {
             base.OnNetworkSessionSynchronized();
-            if (IsClient && !_hasBegunPlay)
+            if (IsClient && !_hasBegunPlay && _owningWorld.didStart)
             {
                 InternalBeginPlay();
             }
@@ -138,6 +162,24 @@ namespace Mayril
             {
                 EndedEntity = this
             });
+        }
+
+        /// <summary>
+        /// 월드가 시작될 때 호출됩니다.
+        /// </summary>
+        private void OnWorldStarted(WorldStarted message)
+        {
+            // 월드 시작 이전에 스폰되고, 씬 동기화도 완료된 오브젝트의 경우, 월드 시작 시점에 BeginPlay를 실행합니다.
+            if (IsSpawned && !_hasBegunPlay)
+            {
+                // 서버는 처음부터 동기화가 완료된 상태이므로 _owningWorld.IsNetworkSessionSynchronized 여부에 관계 없음.
+                if (IsServer || _owningWorld.IsNetworkSessionSynchronized)
+                {
+                    InternalBeginPlay();
+                }
+            }
+            
+            EventBus<WorldStarted>.Unregister(OnWorldStarted);
         }
 
         /// <summary>

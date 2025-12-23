@@ -83,7 +83,6 @@ namespace Mayril
         /// </summary>
         protected override void EndPlay()
         {
-            throw new System.NotImplementedException();
         }
         
         /// <summary>
@@ -93,6 +92,7 @@ namespace Mayril
         {
             base.Awake();
             _networkManager = NetworkManager.Singleton;
+            OwningWorld.Mode = this;
         }
 
         /// <summary>
