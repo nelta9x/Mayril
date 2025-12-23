@@ -1,5 +1,6 @@
 ﻿using Mayril.Events;
 using Unity.Netcode;
+using UnityEngine;
 
 namespace Mayril
 {
@@ -7,6 +8,7 @@ namespace Mayril
     /// 월드 상 단위 오브젝트를 표현하는 클래스.
     /// 모든 레벨에 배치되는 월드 오브젝트들은 이 클래스를 상속받아야 합니다.
     /// </summary>
+    [DefaultExecutionOrder(1)]
     public abstract class Entity : NetworkBehaviour
     {
         private World _owningWorld;
