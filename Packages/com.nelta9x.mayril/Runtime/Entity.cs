@@ -55,28 +55,7 @@ namespace Mayril
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
-            if (_hasBegunPlay)
-            {// 이미 플레이 됨.
-                return;
-            }
-
-            if (_owningWorld == null)
-            {
-                Debug.LogError($"[Entity] OwningWorld is not found. (name: {name})");
-            }
-
-            if (!_owningWorld.didStart)
-            {
-                // 아직 월드가 시작되지 않음.
-                // 이 경우 WorldStarted 메시지를 받았을 때, BeginPlay를 실행합니다.
-                return;
-            }
-            
-            // 클라이언트에서 엔티티가 스폰 되었더라도, 모든 동기화가 완료되기 전까지는 BeginPlay를 호출하지 않고 미룹니다.
-            if (IsServer || _owningWorld.IsNetworkSessionSynchronized)
-            {
-                InternalBeginPlay();
-            }
+            TryBeginPlay();
         }
 
         /// <summary>
@@ -85,6 +64,7 @@ namespace Mayril
         /// </summary>
         public override void OnNetworkDespawn()
         {
+            EventBus<WorldStarted>.Unregister(OnWorldStarted);
             if (_hasBegunPlay)
             {
                 InternalEndPlay();
@@ -103,17 +83,7 @@ namespace Mayril
         /// </summary>
         protected virtual void Awake()
         {
-            // 엔티티는 비활성화 되어있다가, 플레이 가능해 질 때 Active 여부를 활성화합니다.
-            // 주의: 이 시점에 다른 컴포넌트의 OnDisable이 호출됨
-            // 예)
-            // - 서버: 네트워크 오브젝트 스폰 완료,
-            // - 클라이언트: 세션 동기화 완료 시
             _owningWorld = World.Instance;
-            enabled = false; // BeginPlay 호출 전까진 Tick이 돌지 못하도록 보장.
-            if (!_owningWorld.didStart)
-            {
-                EventBus<WorldStarted>.Register(OnWorldStarted);   
-            }
         }
 
         /// <summary>
@@ -121,6 +91,12 @@ namespace Mayril
         /// </summary>
         public override void OnDestroy()
         {
+            // OnNetworkDespawn을 거치지 않고 파괴되는 예외 상황 방어
+            if (_hasBegunPlay)
+            {
+                InternalEndPlay();
+            }
+            
             EventBus<WorldStarted>.Unregister(OnWorldStarted);
             base.OnDestroy();
         }
@@ -132,25 +108,7 @@ namespace Mayril
         protected override void OnNetworkSessionSynchronized()
         {
             base.OnNetworkSessionSynchronized();
-            if (IsClient && !_hasBegunPlay && _owningWorld.didStart)
-            {
-                InternalBeginPlay();
-            }
-        }
-
-        /// <summary>
-        /// (내부 전용) 엔티티가 플레이 가능해졌을 때 호출됩니다.
-        /// </summary>
-        private void InternalBeginPlay()
-        {
-            _owningWorld.AddEntity(this);
-            BeginPlay();
-            _hasBegunPlay = true;
-            enabled = true;
-            EventBus<EntityPlayStarted>.Trigger(new EntityPlayStarted()
-            {
-                StartedEntity = this
-            });
+            TryBeginPlay();
         }
 
         /// <summary>
@@ -173,17 +131,78 @@ namespace Mayril
         /// </summary>
         private void OnWorldStarted(WorldStarted message)
         {
-            // 월드 시작 이전에 스폰되고, 씬 동기화도 완료된 오브젝트의 경우, 월드 시작 시점에 BeginPlay를 실행합니다.
-            if (IsSpawned && !_hasBegunPlay)
-            {
-                // 서버는 처음부터 동기화가 완료된 상태이므로 _owningWorld.IsNetworkSessionSynchronized 여부에 관계 없음.
-                if (IsServer || _owningWorld.IsNetworkSessionSynchronized)
+            TryBeginPlay();
+        }
+        
+        /// <summary>
+        /// BeginPlay가 호출 가능한지 확인하고, 호출 가능한 조건이라면 BeginPlay를 실행합니다.
+        /// </summary>
+        private void TryBeginPlay()
+        {
+            if (_hasBegunPlay)
+            {// 이미 BeginPlay 호출 됨.
+                return;
+            }
+            
+            if (!didStart)
+            {// Start가 실행되지 않음. Start 시점으로 BeginPlay를 미룹니다.
+                return;
+            }
+
+            if (_owningWorld == null)
+            {// 씬 오브젝트의 경우, Awake보다 OnNetworkSpawn이 먼저 호출 되므로 World 인스턴스를 여기서도 설정.
+                _owningWorld = World.Instance;
+                if (_owningWorld == null)
                 {
-                    InternalBeginPlay();
+                    Debug.LogError($"[Entity] OwningWorld is not found. (name: {name})");
+                    return;
                 }
             }
             
+            if (!_owningWorld.didStart)
+            {// 월드가 시작되지 않음. 월드 시작 시점으로 BeginPlay를 미룹니다.
+                enabled = false;
+                EventBus<WorldStarted>.Unregister(OnWorldStarted);
+                EventBus<WorldStarted>.Register(OnWorldStarted);
+                return;
+            }
+
+            if (!IsSpawned)
+            {// 스폰되지 않음. 스폰 시점으로 BeginPlay를 미룹니다.
+                enabled = false;
+                return;
+            }
+
+            if (IsServer)
+            {
+                InternalBeginPlay();
+            }
+            else if (IsClient)
+            {
+                if (!_owningWorld.IsNetworkSessionSynchronized)
+                {// 아직 세션 동기화가 되지 않음. 세션 동기화 완료 시점으로 BeginPlay를 미룹니다.
+                    enabled = false;
+                    return;
+                }
+
+                InternalBeginPlay();
+            }
+        }
+        
+        /// <summary>
+        /// 엔티티가 플레이 가능해졌을 때 호출됩니다.
+        /// </summary>
+        private void InternalBeginPlay()
+        {
             EventBus<WorldStarted>.Unregister(OnWorldStarted);
+            _hasBegunPlay = true;
+            _owningWorld.AddEntity(this);
+            BeginPlay();
+            enabled = true;
+            EventBus<EntityPlayStarted>.Trigger(new EntityPlayStarted()
+            {
+                StartedEntity = this
+            });
         }
 
         /// <summary>
@@ -193,6 +212,7 @@ namespace Mayril
         /// </summary>
         private void Start()
         {
+            TryBeginPlay();
         }
     }
 }
