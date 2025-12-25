@@ -272,7 +272,6 @@ namespace Mayril
         /// </summary>
         private void Start()
         {
-            _mode?.SpawnGameState();
             Debug.Log($"[World] World started. (World: {name}, NetworkMode: {networkMode})");
             EventBus<WorldStarted>.Trigger(new WorldStarted
             {
