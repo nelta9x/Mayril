@@ -46,20 +46,12 @@ namespace Mayril
         /// </summary>
         public virtual void OnPlayerEntered(ulong clientId, NetworkClient client)
         {
-            PlayerState newPlayerState;
             if (playerStatePrefab == null)
             {
-                var newGameObject = new GameObject("PlayerState_AutoCreated");
-                newGameObject.SetActive(false);
-                newGameObject.AddComponent<NetworkObject>();
-                newPlayerState = newGameObject.AddComponent<PlayerState>();
-                newGameObject.SetActive(true);
+                return;
             }
-            else
-            {
-                newPlayerState = Instantiate(playerStatePrefab);
-            }
-
+            
+            var newPlayerState = Instantiate(playerStatePrefab);
             newPlayerState.PlayerClientId = clientId;
             newPlayerState.NetworkObject.Spawn(true);
         }
@@ -132,6 +124,11 @@ namespace Mayril
         /// </summary>
         internal void SpawnGameState()
         {
+            if (gameStatePrefab == null)
+            {
+                return;
+            }
+
             var newGameState = Instantiate(gameStatePrefab);
             OwningWorld.GameState = newGameState;
             if (_networkManager != null)
@@ -146,6 +143,11 @@ namespace Mayril
         private void OnServerStarted()
         {
             Debug.Log("[PlayMode] Server started.");
+            if (OwningWorld.GameState == null)
+            {
+                return;
+            }
+            
             SpawnGameState();
         }
 
