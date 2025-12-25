@@ -201,24 +201,21 @@ namespace Mayril
             }
 
             _instance = this;
-            _networkManager = NetworkManager.Singleton;
-            if (_networkManager == null)
+            
+            _owningGameInstance = GameInstance.Instance;
+            foreach (var entity in FindObjectsByType<Entity>(FindObjectsSortMode.None))
             {
-                Debug.LogError("[World] NetworkManager is not found.");
-                return;
-            }
+                if (!entity.IsSpawned)
+                { // 스폰 시 EntitySpawned 이벤트를 통해 World에 추가될 것이기에 지금 추가하지 않음.
+                    continue;
+                }
 
-            if (_networkManager.IsServer)
-            {
-                NetworkMode = WorldNetworkMode.Host;
-            }
-            else if (_networkManager.IsClient)
-            {
-                NetworkMode = WorldNetworkMode.Client;
-            }
-            else
-            {
-                NetworkMode = WorldNetworkMode.Standalone;
+                if (entity.OwningWorld == this)
+                { // 이미 월드에 추가되어 있음.
+                    continue;
+                }
+
+                AddEntity(entity);
             }
             
             // 월드 시스템 생성.
@@ -236,41 +233,37 @@ namespace Mayril
                 _worldSystems.Add(worldSystem);
                 _worldSystemByType.Add(worldSystemType, worldSystem);
             }
-
-            _owningGameInstance = GameInstance.Instance;
-            foreach (var entity in FindObjectsByType<Entity>(FindObjectsSortMode.None))
+            
+            _networkManager = NetworkManager.Singleton;
+            if (_networkManager == null)
             {
-                if (!entity.IsSpawned)
-                { // 스폰 시 EntitySpawned 이벤트를 통해 World에 추가될 것이기에 지금 추가하지 않음.
-                    continue;
-                }
-
-                if (entity.OwningWorld == this)
-                { // 이미 월드에 추가되어 있음.
-                    continue;
-                }
-
-                AddEntity(entity);
+                Debug.LogError("[World] NetworkManager is not found.");
+                NetworkMode = WorldNetworkMode.Standalone;
             }
-
-            bool shouldSpawnMode = NetworkMode != WorldNetworkMode.Client;
-            if (shouldSpawnMode)
+            else
             {
-                if (modePrefab == null)
+                if (_networkManager.IsServer)
                 {
-                    var newGameObject = new GameObject("PlayMode_AutoCreated");
-                    newGameObject.SetActive(false);
-                    newGameObject.AddComponent<NetworkObject>();
-                    _mode = newGameObject.AddComponent<PlayMode>();
-                    _mode.NetworkObject.SpawnWithObservers = false;
-                    newGameObject.SetActive(true);
+                    NetworkMode = WorldNetworkMode.Host;
+                }
+                else if (_networkManager.IsClient)
+                {
+                    NetworkMode = WorldNetworkMode.Client;
                 }
                 else
                 {
-                    _mode = Instantiate(modePrefab);
+                    NetworkMode = WorldNetworkMode.Standalone;
                 }
+            }
 
-                _mode.NetworkObject.Spawn(true);
+            bool shouldSpawnMode = NetworkMode != WorldNetworkMode.Client;
+            if (shouldSpawnMode && modePrefab != null)
+            {
+                _mode = Instantiate(modePrefab);
+                if (_networkManager != null)
+                {
+                    _mode.NetworkObject.Spawn(true);   
+                }
             }
         }
         
@@ -279,6 +272,7 @@ namespace Mayril
         /// </summary>
         private void Start()
         {
+            _mode?.SpawnGameState();
             Debug.Log($"[World] World started. (World: {name}, NetworkMode: {networkMode})");
             EventBus<WorldStarted>.Trigger(new WorldStarted
             {

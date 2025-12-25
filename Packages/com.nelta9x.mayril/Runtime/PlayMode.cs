@@ -130,24 +130,14 @@ namespace Mayril
         /// <summary>
         /// 게임 스테이트를 스폰합니다.
         /// </summary>
-        private void SpawnGameState()
+        internal void SpawnGameState()
         {
-            GameState newGameState;
-            if (gameStatePrefab == null)
-            {
-                var newGameObject = new GameObject("GameState_AutoCreated");
-                newGameObject.SetActive(false);
-                newGameObject.AddComponent<NetworkObject>();
-                newGameState = newGameObject.AddComponent<GameState>();
-                newGameObject.SetActive(true);
-            }
-            else
-            {
-                newGameState = Instantiate(gameStatePrefab);
-            }
-            
+            var newGameState = Instantiate(gameStatePrefab);
             OwningWorld.GameState = newGameState;
-            newGameState.NetworkObject.Spawn(true);
+            if (_networkManager != null)
+            {
+                newGameState.NetworkObject.Spawn(true);
+            }
         }
         
         /// <summary>
