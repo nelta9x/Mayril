@@ -62,7 +62,7 @@ namespace Mayril
         /// <summary>
         /// 모든 플레이어가 씬 로드를 완료했을 때 호출됩니다.
         /// </summary>
-        public virtual void OnAllPlayersReady()
+        public virtual void OnAllPlayersLoaded()
         {
         }
         
@@ -199,7 +199,7 @@ namespace Mayril
             _isLoadEventCompleted = true;
             TrySpawnGameState();
             TrySpawnPlayerStates();
-            OnAllPlayersReady();
+            OnAllPlayersLoaded();
         }
         
         /// <summary>
