@@ -16,7 +16,6 @@ namespace Mayril
         [SerializeField] private PlayerState playerStatePrefab;
 
         private NetworkManager _networkManager;
-        private bool _isLoadEventCompleted;
 
         /// <summary>
         /// 모드가 스폰될 때 호출됩니다.
@@ -88,11 +87,6 @@ namespace Mayril
             base.Awake();
             _networkManager = NetworkManager.Singleton;
             OwningWorld.Mode = this;
-            if (gameStatePrefab != null)
-            {
-                var newGameState = Instantiate(gameStatePrefab);
-                OwningWorld.GameState = newGameState;
-            }
         }
 
         /// <summary>
@@ -130,40 +124,25 @@ namespace Mayril
         }
         
         /// <summary>
-        /// GameState 스폰이 가능한지 확인하고, 가능하다면 GameState를 스폰합니다.
+        /// GameState를 스폰합니다.
         /// </summary>
-        private void TrySpawnGameState()
+        private void SpawnGameState()
         {
-            if (!_isLoadEventCompleted)
-            {// 아직 씬을 로딩하지 못한 플레이어가 있음.
-                return;
-            }
-            
-            var world = OwningWorld;
-            if (world == null)
-            {
-                return;
-            }
-            
-            var gameState = world.GameState;
-            if (gameState == null || gameState.IsSpawned)
+            if (gameStatePrefab == null)
             {
                 return;
             }
 
-            gameState.NetworkObject.Spawn(true);
+            var newGameState = Instantiate(gameStatePrefab);
+            OwningWorld.GameState = newGameState;
+            newGameState.NetworkObject.Spawn(true);
         }
-
+        
         /// <summary>
         /// PlayerState 스폰 가능 여부를 확인하고, 가능하다면 스폰합니다.
         /// </summary>
         private void TrySpawnPlayerStates()
         {
-            if (!_isLoadEventCompleted)
-            {// 아직 씬을 로딩하지 못한 플레이어가 있음.
-                return;
-            }
-            
             if (playerStatePrefab == null)
             {
                 return;
@@ -196,8 +175,12 @@ namespace Mayril
         // </summary>
         private void OnSceneLoadEventCompleted(string sceneName, LoadSceneMode loadSceneMode, List<ulong> clientsCompleted, List<ulong> clientsTimedOut)
         {
-            _isLoadEventCompleted = true;
-            TrySpawnGameState();
+            // 주의:
+            // 씬 로드가 완료되었을 때 서버 외에 공유되는 런타임 오브젝트들을 스폰해야 합니다.
+            // 이는 아래에 사항에 근거합니다.
+            // - 클라이언트들이 씬 이동이 완료되기 전에 스폰할 경우, 이동되기 전 씬에서 Spawn이 발생합니다.
+            // - 생성 후 스폰하지 않은 한 상태로 씬 이동이 완료될 경우, SceneObject로 취급됩니다. 이 경우 그런 In Scene 오브젝트에 NetworkObjectHash를 가진 게 없다는 오류가 발생합니다.
+            SpawnGameState();
             TrySpawnPlayerStates();
             OnAllPlayersLoaded();
         }
@@ -208,7 +191,6 @@ namespace Mayril
         private void OnServerStarted()
         {
             Debug.Log("[PlayMode] Server started.");
-            TrySpawnGameState();
         }
 
         /// <summary>
