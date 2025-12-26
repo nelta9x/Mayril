@@ -179,12 +179,6 @@ namespace Mayril
             }
             else if (IsClient)
             {
-                if (!_owningWorld.IsNetworkSessionSynchronized)
-                {// 아직 세션 동기화가 되지 않음. 세션 동기화 완료 시점으로 BeginPlay를 미룹니다.
-                    enabled = false;
-                    return;
-                }
-
                 InternalBeginPlay();
             }
         }

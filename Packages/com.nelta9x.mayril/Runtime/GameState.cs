@@ -74,15 +74,5 @@ namespace Mayril
         protected override void EndPlay()
         {
         }
-        
-        /// <summary>
-        /// (클라이언트 전용) 클라이언트에서 네트워크 세션 동기화가 완료되었을 때 호출됩니다.
-        /// 이 메소드를 재정의 시, 반드시 base.OnNetworkSessionSynchronized()를 호출해야 합니다.
-        /// </summary>
-        protected override void OnNetworkSessionSynchronized()
-        {
-            OwningWorld.IsNetworkSessionSynchronized = true;
-            base.OnNetworkSessionSynchronized();
-        }
     }
 }

@@ -18,7 +18,6 @@ namespace Mayril
         [SerializeField] private WorldNetworkMode networkMode = WorldNetworkMode.Standalone;
         
         private static World _instance;
-        private bool _isNetworkSessionSynchronized;
         private GameInstance _owningGameInstance;
         private NetworkManager _networkManager;
         private PlayMode _mode;
@@ -40,17 +39,6 @@ namespace Mayril
         /// 게임 인스턴스.
         /// </summary>
         public GameInstance OwningGameInstance => _owningGameInstance;
-
-        /// <summary>
-        /// 월드가 네트워크 세션 동기화가 완료되었는지 여부.
-        /// 이 값은 Server에선 항상 세션 동기화 된 상태이기 때문에 의미 없으며,
-        /// 클라이언트에서는 GameState에서 설정합니다. 
-        /// </summary>
-        public bool IsNetworkSessionSynchronized
-        {
-            get => _isNetworkSessionSynchronized;
-            internal set => _isNetworkSessionSynchronized = value;
-        }
 
         /// <summary>
         /// 월드의 네트워크 모드.
