@@ -1,56 +1,47 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using UnityEngine;
+using Unity.Netcode;
 
 namespace Mayril.StatSystem
 {
     /// <summary>
     /// 스탯 값 하나를 나타내는 클래스입니다.
     /// </summary>
-    [Serializable]
-    public class StatValue : ISerializationCallbackReceiver
+    public class StatValue : NetworkVariableBase
     {
-        public delegate void ValueChangedDelegate(StatValue statValue, float oldValue);
-        
-        [SerializeField] private string name;
-        [SerializeField] private float baseValue;
-        [SerializeField] private float value;
-        private bool _isDirty;
-        private ISerializationCallbackReceiver _serializationCallbackReceiverImplementation;
-        private StatModifierContainer _modifiers = new();
+        private float _baseValue;
+        private float _currentValue;
+        private StatSet _stats;
+        private readonly StatModifierContainer _modifiers = new();
 
         /// <summary>
-        /// 값이 변경되었을 때 호출됩니다.
+        /// 연결된 스탯.
         /// </summary>
-        public event ValueChangedDelegate OnValueChanged;
-
-        public StatValue(string statName)
+        public StatSet Stats
         {
-            name = statName;
-            Reset(0f);
+            get => _stats;
+            set => _stats = value;
         }
 
-        public StatValue(string statName, float baseValue)
+        public StatValue(float baseValue)
         {
-            name = statName;
             Reset(baseValue);
         }
-
-        /// <summary>
-        /// 스탯 이름.
-        /// </summary>
-        public string Name => name;
 
         /// <summary>
         /// 기반 값.
         /// </summary>
         public float BaseValue
         {
-            get => baseValue;
+            get => _baseValue;
             set
             {
-                baseValue = value;
+                if (_baseValue == value)
+                {
+                    return;
+                }
+                
+                _baseValue = value;
                 RecalculateValue();
             }
         }
@@ -59,23 +50,20 @@ namespace Mayril.StatSystem
         /// 최종 값.
         /// 기반 값에 모든 모다피아어들을 반영했을 때의 값.
         /// </summary>
-        public float Value
-        {
-            get
-            {
-                if (_isDirty)
-                {
-                    RecalculateValue();
-                }
+        public float CurrentValue => _currentValue;
 
-                return value;
-            }
-        }
-        
         /// <summary>
         /// 모든 모디파이어들.
         /// </summary>
         public StatModifierContainer Modifiers => _modifiers;
+
+        /// <summary>
+        /// 초기화 시점에 호출됩니다.
+        /// </summary>
+        public override void OnInitialize()
+        {
+            _stats = GetBehaviour() as StatSet;
+        }
 
         /// <summary>
         /// 현재 값을 초기화합니다.
@@ -95,16 +83,16 @@ namespace Mayril.StatSystem
         /// /// <param name="modifiers">모디파이어들.</param>
         public void Reset(float newBaseValue, IEnumerable<StatModifier> modifiers)
         {
-            _isDirty = false;
+            SetDirty(false);
             _modifiers.Clear();
-            baseValue = newBaseValue;
-            value = baseValue;
+            _baseValue = newBaseValue;
+            _currentValue = newBaseValue;
             foreach (var modifier in modifiers)
             {
                 _modifiers.Add(modifier);
             }
 
-            value = _modifiers.Apply(baseValue);
+            _currentValue = _modifiers.Apply(_baseValue);
         }
 
         /// <summary>
@@ -112,8 +100,8 @@ namespace Mayril.StatSystem
         /// </summary>
         public void AddModifier(StatModifier modifier)
         {
-            _isDirty = true;
             _modifiers.Add(modifier);
+            RecalculateValue();
         }
 
         /// <summary>
@@ -126,7 +114,7 @@ namespace Mayril.StatSystem
                 return false;
             }
             
-            _isDirty = true;
+            SetDirty(true);
             return true;
         }
 
@@ -135,27 +123,67 @@ namespace Mayril.StatSystem
         /// </summary>
         private void RecalculateValue()
         {
-            float oldValue = value;
-            value = _modifiers.Apply(baseValue);
-            if (value != oldValue)
+            float oldCurrentValue = _currentValue;
+            float newCurrentValue = _modifiers.Apply(_baseValue);
+            bool isDirty = oldCurrentValue != newCurrentValue; 
+            if (isDirty)
             {
-                OnValueChanged?.Invoke(this, oldValue);
+                if (_stats != null)
+                {
+                    // 값이 보정된 이후에도 변경이 되었는지 확인.
+                    _stats.OnStatValueChanging(this, ref newCurrentValue);
+                    isDirty = oldCurrentValue != newCurrentValue;
+                }
             }
 
-            _isDirty = false;
-        }
-
-        public void OnBeforeSerialize()
-        {
+            if (!isDirty)
+            {
+                return;
+            }
+            
+            SetDirty(true);
+            _currentValue = newCurrentValue;
+            _stats?.OnStatValueChanged(this);
         }
 
         /// <summary>
-        /// 유니티 직렬화 직후에 호출되는 함수.
+        /// 변경된 부분만 직렬화합니다. (델타 동기화용)
+        /// 이 메소드 호출 이후, Netcode가 SetDirty를 false로 자동 처리합니다.
         /// </summary>
-        public void OnAfterDeserialize()
+        public sealed override void WriteDelta(FastBufferWriter writer)
         {
-            _modifiers ??= new StatModifierContainer();
-            RecalculateValue();
+            WriteField(writer);
+        }
+
+        /// <summary>
+        /// 전체 상태를 직렬화합니다. (초기 동기화용)
+        /// </summary>
+        public sealed override void WriteField(FastBufferWriter writer)
+        {
+            writer.WriteValueSafe(_baseValue);
+            writer.WriteValueSafe(_currentValue);
+        }
+
+        /// <summary>
+        /// 전체 상태를 역직렬화합니다. (권한자에서는 호출되지 않음)
+        /// </summary>
+        public sealed override void ReadField(FastBufferReader reader)
+        {
+            float oldCurrentValue = _currentValue;
+            reader.ReadValueSafe(out _baseValue);
+            reader.ReadValueSafe(out _currentValue);
+            if (_stats != null && oldCurrentValue != _currentValue)
+            {
+                _stats.OnStatValueChanged(this);
+            }
+        }
+
+        /// <summary>
+        /// 변경된 부분을 역직렬화합니다. (권한자에서는 호출되지 않음)
+        /// </summary>
+        public sealed override void ReadDelta(FastBufferReader reader, bool keepDirtyDelta)
+        {
+            ReadField(reader);
         }
     }
 }
