@@ -1,0 +1,8 @@
+{
+  "name": "Mayril.InventorySystem",
+  "rootNamespace": "Mayril",
+  "references": [
+    "UnityEngine",
+    "Unity.Netcode.Runtime"
+  ] 
+}
