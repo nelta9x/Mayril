@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Linq;
 
 namespace Mayril.StatSystem
 {
@@ -9,9 +8,9 @@ namespace Mayril.StatSystem
     /// </summary>
     public class StatModifierContainer
     {
-        public readonly List<StatModifier> Additive = new();
-        public readonly List<StatModifier> Multiplicative = new();
-        public readonly List<StatModifier> Fixed = new();
+        // 최적화를 위해 단일 리스트로 관리 (메모리 할당 감소)
+        // 외부에서 직접 접근할 필요가 없으므로 private으로 변경 (캡슐화 강화)
+        private readonly List<StatModifier> _modifiers = new();
 
         /// <summary>
         /// 기반 값에 모디파이어를 적용했을 때의 값을 계산합니다.
@@ -19,11 +18,28 @@ namespace Mayril.StatSystem
         /// </summary>
         public float Apply(float baseValue)
         {
-            float resultValue = baseValue;
-            resultValue += Additive.Sum(x => x.Value);
-            resultValue *= (1f + Multiplicative.Sum(x => x.Value));
-            resultValue += Fixed.Sum(x => x.Value);
-            return resultValue;
+            float additiveSum = 0f;
+            float multiplicativeSum = 0f;
+            float fixedSum = 0f;
+
+            // 단일 루프로 모든 모디파이어 처리 (LINQ 제거 및 순회 최적화)
+            foreach (var modifier in _modifiers)
+            {
+                switch (modifier.Type)
+                {
+                    case StatModifierType.Additive:
+                        additiveSum += modifier.Value;
+                        break;
+                    case StatModifierType.Multiplicative:
+                        multiplicativeSum += modifier.Value;
+                        break;
+                    case StatModifierType.Fixed:
+                        fixedSum += modifier.Value;
+                        break;
+                }
+            }
+
+            return (baseValue + additiveSum) * (1f + multiplicativeSum) + fixedSum;
         }
 
         /// <summary>
@@ -31,18 +47,7 @@ namespace Mayril.StatSystem
         /// </summary>
         public void Add(StatModifier modifier)
         {
-            switch (modifier.Type)
-            {
-                case StatModifierType.Additive:
-                    Additive.Add(modifier);
-                    break;
-                case StatModifierType.Multiplicative:
-                    Multiplicative.Add(modifier);
-                    break;
-                case StatModifierType.Fixed:
-                    Fixed.Add(modifier);
-                    break;
-            }
+            _modifiers.Add(modifier);
         }
 
         /// <summary>
@@ -50,13 +55,7 @@ namespace Mayril.StatSystem
         /// </summary>
         public bool Remove(StatModifier modifier)
         {
-            return modifier.Type switch
-            {
-                StatModifierType.Additive => Additive.Remove(modifier),
-                StatModifierType.Multiplicative => Multiplicative.Remove(modifier),
-                StatModifierType.Fixed => Fixed.Remove(modifier),
-                _ => false
-            };
+            return _modifiers.Remove(modifier);
         }
 
         /// <summary>
@@ -64,9 +63,7 @@ namespace Mayril.StatSystem
         /// </summary>
         public void Clear()
         {
-            Additive.Clear();
-            Multiplicative.Clear();
-            Fixed.Clear();
+            _modifiers.Clear();
         }
     }
 }

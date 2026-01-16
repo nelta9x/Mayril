@@ -11,13 +11,13 @@ namespace Mayril.StatSystem
     {
         private float _baseValue;
         private float _currentValue;
-        private StatSet _stats;
+        private IStatSet _stats;
         private readonly StatModifierContainer _modifiers = new();
 
         /// <summary>
         /// 연결된 스탯.
         /// </summary>
-        public StatSet Stats
+        public IStatSet Stats
         {
             get => _stats;
             set => _stats = value;
@@ -42,6 +42,7 @@ namespace Mayril.StatSystem
                 }
                 
                 _baseValue = value;
+                SetDirty(true);
                 RecalculateValue();
             }
         }
@@ -62,7 +63,7 @@ namespace Mayril.StatSystem
         /// </summary>
         public override void OnInitialize()
         {
-            _stats = GetBehaviour() as StatSet;
+            _stats = GetBehaviour() as IStatSet;
         }
 
         /// <summary>
@@ -114,7 +115,7 @@ namespace Mayril.StatSystem
                 return false;
             }
             
-            SetDirty(true);
+            RecalculateValue();
             return true;
         }
 

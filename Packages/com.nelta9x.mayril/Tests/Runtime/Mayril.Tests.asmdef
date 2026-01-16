@@ -5,7 +5,8 @@
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner",
         "Mayril.InventorySystem",
-        "Unity.Netcode.Runtime"
+        "Unity.Netcode.Runtime",
+        "Mayril"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
