@@ -191,20 +191,6 @@ namespace Mayril
             _instance = this;
             
             _owningGameInstance = GameInstance.Instance;
-            foreach (var entity in FindObjectsByType<Entity>(FindObjectsSortMode.None))
-            {
-                if (!entity.IsSpawned)
-                { // 스폰 시 EntitySpawned 이벤트를 통해 World에 추가될 것이기에 지금 추가하지 않음.
-                    continue;
-                }
-
-                if (entity.OwningWorld == this)
-                { // 이미 월드에 추가되어 있음.
-                    continue;
-                }
-
-                AddEntity(entity);
-            }
             
             // 월드 시스템 생성.
             var worldSystemTypes = AppDomain.CurrentDomain.GetAssemblies()
