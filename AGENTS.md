@@ -67,6 +67,7 @@ flowchart LR
     EB -->|Invoke| S2[Subscriber 2]
 ```
 
+- Namespace: `Mayril.EventSystem`
 - `EventBus<T>.Register(handler)` / `Unregister(handler)`
 - `EventBus<T>.Trigger(new Event())`
 - 내장 이벤트: `WorldStarted`, `WorldDestroyed`, `EntityPlayStarted`, `EntityPlayEnded`
@@ -92,9 +93,14 @@ Tests: `Packages/com.nelta9x.mayril/Tests/Runtime/`
 **Unity Editor에서 실행 (권장):**
 `Window > General > Test Runner`
 
-**CLI로 실행:**
-```
-<Unity 실행 파일 경로> -runTests -batchmode -projectPath . -testResults ./TestResults.xml -testPlatform PlayMode
+**CLI로 실행 (Agent Self-Test):**
+1. Unity 버전 확인: `ProjectSettings/ProjectVersion.txt`의 `m_EditorVersion`
+2. 실행 명령어 (Mac 기준 예시):
+```bash
+# <Unity Editor Path>는 실제 Unity 설치 경로로 대체하세요.
+# 예: /Applications/Unity/Hub/Editor/6000.3.2f1/Unity.app/Contents/MacOS/Unity
+
+<Unity Editor Path> -runTests -batchmode -projectPath . -testResults TestResults.xml -testPlatform PlayMode
 ```
 
 **테스트 작성 예시:**
