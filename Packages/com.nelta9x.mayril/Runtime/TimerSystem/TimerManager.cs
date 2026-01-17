@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Mayril.Internal;
 using UnityEngine;
 
 namespace Mayril
@@ -49,7 +48,7 @@ namespace Mayril
             double executionTime = _elapsedTime + delay;
             _postedEvents.Enqueue(handleId, executionTime, callback);
 
-            return new TimerHandle(handleId);
+            return new TimerHandle(handleId, executionTime);
         }
 
         /// <summary>
@@ -60,6 +59,16 @@ namespace Mayril
         public bool CancelEvent(TimerHandle handle)
         {
             if (!handle.IsValid)
+            {
+                return false;
+            }
+
+            // [Data-Oriented Optimization]
+            // 이미 실행 시간이 지난 핸들은 취소할 필요가 없습니다. (Zombie Handle)
+            // 이를 통해 _cancelledHandles에 불필요한 데이터가 쌓이는 것을 방지합니다.
+            // 부동소수점 오차를 고려해 약간의 여유값(Epsilon)을 둘 수도 있지만, 
+            // 여기서는 단순성을 위해 엄격하게 비교합니다.
+            if (handle.ExecutionTime < _elapsedTime)
             {
                 return false;
             }

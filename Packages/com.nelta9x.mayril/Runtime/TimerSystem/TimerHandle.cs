@@ -8,13 +8,16 @@ namespace Mayril
     public readonly struct TimerHandle : IEquatable<TimerHandle>
     {
         private readonly ulong _id;
+        private readonly double _executionTime;
 
-        internal TimerHandle(ulong id)
+        internal TimerHandle(ulong id, double executionTime)
         {
             _id = id;
+            _executionTime = executionTime;
         }
 
         internal ulong Id => _id;
+        internal double ExecutionTime => _executionTime;
 
         /// <summary>
         /// 핸들이 유효한지 확인합니다. ID가 0이면 무효한 핸들입니다.

@@ -2,7 +2,7 @@ using System;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
-namespace Mayril.Internal
+namespace Mayril
 {
     /// <summary>
     /// TimeManager 전용 Min Heap 구현.

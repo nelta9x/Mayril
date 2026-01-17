@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace Mayril
+namespace Mayril.EventSystem
 {
     /// <summary>
     /// 이벤트 버스는 게임 내부에서 발생하는 이벤트를 구독을 관리하고, 전파하는 역할을 합니다.
@@ -14,6 +14,11 @@ namespace Mayril
         private static readonly List<Action<T>> _backSubscribers = new(InitialCapacity);
         private static bool _isFrontSubscribersDirty = true; // 초기 동기화 필요 여부.
         
+        static EventBus()
+        {
+            EventBusHelper.Register(Reset);
+        }
+
         /// <summary>
         /// 이벤트를 전파합니다.
         /// </summary>
@@ -86,6 +91,29 @@ namespace Mayril
             foreach (var subscriber in _frontSubscribers)
             {
                 _backSubscribers.Add(subscriber);
+            }
+        }
+    }
+
+    /// <summary>
+    /// EventBus의 정적 상태와 생명주기를 관리하는 내부 헬퍼 클래스입니다.
+    /// [RuntimeInitializeOnLoadMethod]를 통해 게임 시작 시 모든 EventBus를 자동으로 리셋합니다.
+    /// </summary>
+    internal static class EventBusHelper
+    {
+        private static readonly List<Action> _resetActions = new();
+
+        public static void Register(Action resetAction)
+        {
+            _resetActions.Add(resetAction);
+        }
+
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetAll()
+        {
+            foreach (var action in _resetActions)
+            {
+                action();
             }
         }
     }

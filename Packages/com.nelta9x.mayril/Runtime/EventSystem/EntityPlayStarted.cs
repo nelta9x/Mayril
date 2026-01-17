@@ -1,4 +1,4 @@
-namespace Mayril.Events
+namespace Mayril.EventSystem
 {
     /// <summary>
     /// 엔티티 플레이가 가능해졌을 때 호출됩니다.

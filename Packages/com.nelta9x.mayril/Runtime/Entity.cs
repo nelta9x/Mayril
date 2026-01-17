@@ -1,4 +1,4 @@
-﻿using Mayril.Events;
+﻿using Mayril.EventSystem;
 using Unity.Netcode;
 using UnityEngine;
 
