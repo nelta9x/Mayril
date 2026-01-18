@@ -1,3 +1,4 @@
+using Mayril.TagSystem;
 using Unity.Netcode;
 
 namespace Mayril.StatSystem
@@ -17,5 +18,10 @@ namespace Mayril.StatSystem
         /// 값이 변경된 후에 호출됩니다.
         /// </summary>
         void OnStatValueChanged(StatValue stat);
+
+        /// <summary>
+        /// 태그로 스탯 값을 가져옵니다.
+        /// </summary>
+        StatValue GetStatValue(GameTag tag);
     }
 }

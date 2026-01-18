@@ -1,6 +1,6 @@
 # StatSystem
 
-Mayril의 StatSystem은 네트워크 동기화를 지원하는 유연한 스탯 시스템입니다.
+Mayril의 StatSystem은 네트워크 동기화를 지원하고 AbilitySystem과 통합된 유연한 스탯 시스템입니다.
 `BaseValue`(기본값)에 여러 `StatModifier`(버프/디버프)를 연산하여 `CurrentValue`(최종값)를 도출합니다.
 
 ## 아키텍처
@@ -8,8 +8,8 @@ Mayril의 StatSystem은 네트워크 동기화를 지원하는 유연한 스탯 
 ### 핵심 컴포넌트
 
 - **`StatValue`**: 스탯의 핵심 클래스. `NetworkVariableBase`를 상속받아 값이 변경될 때 클라이언트와 동기화됩니다.
-- **`IStatSet`**: `StatValue`들을 포함하는 컨테이너 인터페이스입니다. (예: `CharacterStats`)
-- **`StatModifier`**: 스탯에 영향을 주는 변경 요소입니다. (예: 공격력 +10, 이동속도 50% 증가)
+- **`IStatSet`**: 스탯 컨테이너가 구현해야 할 인터페이스입니다. `GetStatValue`를 통해 태그 기반 검색을 지원해야 합니다. 기본 구현체(`StatSet`)는 제거되었습니다 (Minimalism).
+- **`GameTag`**: 문자열이나 Enum 대신 계층형 태그 시스템을 사용하여 스탯을 식별합니다.
 
 ### 계산 공식
 
@@ -27,18 +27,26 @@ CurrentValue = (BaseValue + \sum Additive) \times (1 + \sum Multiplicative) + \s
 
 ### 1. 스탯 정의하기 (`IStatSet` 구현)
 
-캐릭터의 스탯을 정의하려면 `NetworkBehaviour`를 상속받고 `IStatSet`을 구현합니다.
+캐릭터의 스탯을 정의하려면 `NetworkBehaviour`를 상속받고 `IStatSet` 인터페이스를 구현합니다. `StatSet` 베이스 클래스는 존재하지 않으므로, 스탯 저장 및 검색 로직을 직접 구현해야 합니다. 이는 개발자에게 구현의 자유(Switch-case vs Dictionary)를 제공합니다.
 
 ```csharp
+using Mayril.StatSystem;
+using Mayril.TagSystem;
+using Unity.Netcode;
+
 public class CharacterStats : NetworkBehaviour, IStatSet
 {
-    // 스탯 정의
-    public readonly StatValue Health = new(100f);
-    public readonly StatValue Attack = new(10f);
+    // 순수 프로퍼티로 정의
+    public StatValue Health { get; private set; } = new StatValue(100f);
+    public StatValue Attack { get; private set; } = new StatValue(10f);
 
-    public override void OnNetworkSpawn()
+    // 스탯 검색 구현 (Switch-Case 사용 시 딕셔너리 할당조차 없음)
+    public StatValue GetStatValue(GameTag tag)
     {
-        // StatValue는 자동으로 초기화됩니다.
+        // O(1) 정수 ID 비교
+        if (tag.Id == GameTags.CharacterHealth.Id) return Health;
+        if (tag.Id == GameTags.CharacterAttack.Id) return Attack;
+        return null;
     }
 
     // 값 변경 전 검증/보정 (예: 체력은 0 밑으로 내려갈 수 없음)
@@ -61,22 +69,23 @@ public class CharacterStats : NetworkBehaviour, IStatSet
 }
 ```
 
-### 2. 모디파이어 적용하기
+### 2. 스탯 사용하기 (AbilitySystem 연동)
+
+`AbilitySystemComponent`는 같은 게임 오브젝트에 있는 `StatSet`을 자동으로 발견합니다.
+
+```csharp
+// 태그로 스탯 가져오기 (문자열 등록 불필요)
+var healthStat = abilitySystem.GetStat(new GameTag("Character.Health"));
+```
+
+### 3. 모디파이어 적용하기
+
+`Effect` 시스템을 통해 적용하거나, 직접 코드로 적용할 수 있습니다.
 
 ```csharp
 // 공격력 +5 (Additive)
 var buff = new StatModifier(StatModifierType.Additive, 5f);
-character.Stats.Attack.AddModifier(buff);
-
-// 공격력 50% 증가 (Multiplicative, 0.5 = 50%)
-var percentBuff = new StatModifier(StatModifierType.Multiplicative, 0.5f);
-character.Stats.Attack.AddModifier(percentBuff);
-```
-
-### 3. 모디파이어 제거하기
-
-```csharp
-character.Stats.Attack.RemoveModifier(buff);
+stat.AddModifier(buff);
 ```
 
 > [!IMPORTANT]
@@ -85,4 +94,22 @@ character.Stats.Attack.RemoveModifier(buff);
 ## 모범 사례
 
 - **초기화**: `StatValue`는 `NetworkVariable`이므로 반드시 `OnNetworkSpawn` 이후에 사용해야 안전합니다.
-- **성능**: `StatModifierContainer`는 최적화를 위해 LINQ 대신 `foreach` 루프를 사용합니다. 빈번한 스탯 변경에도 GC 할당을 최소화하도록 설계되었습니다.
+- **GameTag 사용**: 스탯 이름은 하드코딩된 문자열 대신 `GameTag` 상수를 정의하여 사용하는 것을 권장합니다.
+- **스탯 검색 최적화**: 스탯 개수가 적다면 `Dictionary` 대신 `Switch-Case` 문을 사용하여 메모리 할당을 0으로 만드는 것을 권장합니다.
+
+## 설계 철학 (Design Philosophy)
+
+이 시스템은 **Simplicity**, **Explicitness**, **Performance**를 최우선으로 설계되었습니다.
+
+1.  **Immutability & Explicitness**:
+    *   `StatSet` 베이스 클래스 없이 `IStatSet` 인터페이스를 직접 구현합니다. 이는 모든 초기화 및 검색 로직을 코드에 명시적으로 드러내어("No Magic"), 동작을 예측 가능하게 만듭니다.
+2.  **Data-Oriented Design**:
+    *   `StatModifier`와 같은 빈번한 데이터는 `struct`를 사용하고, 단일 `List` 순회로 처리하여 메모리 할당을 최소화하고 캐시 효율성을 극대화합니다.
+3.  **Integer Identity**:
+    *   문자열 비교 대신 정수형 ID 기반의 `GameTag`를 사용하여 빠른 검색(`O(1)`)을 보장합니다.
+
+## 안티 패턴 (Anti-Patterns)
+
+- ❌ **`OnValidate`에서 스탯 초기화**: 스탯은 네트워크 객체이므로 런타임(`Awake` or `OnNetworkSpawn`)에 초기화되어야 합니다.
+- ❌ **문자열로 스탯 검색**: `GetStat(new GameTag("Health"))` 대신 `public static readonly GameTag Health = ...` 상수를 정의하여 사용하세요. 오타 실수를 방지하고 성능을 높입니다.
+- ❌ **컨테이너 과잉 엔지니어링**: `IStatSet` 구현체는 단순해야 합니다. 복잡한 로직은 `Ability`나 `Effect`로 위임하세요.
