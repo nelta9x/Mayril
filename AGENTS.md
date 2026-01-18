@@ -1,19 +1,19 @@
 # AGENTS.md
 
-This file provides guidance on how to work with Mayril's codebase.
+이 파일은 Mayril 코드베이스 작업 가이드를 제공합니다.
 
-## Project Overview
+## 프로젝트 개요
 
-Mayril is a Unity 6 multiplayer game framework built on Unity Netcode for GameObjects. 
-It provides core abstractions for networked games.
+Mayril은 Unity Netcode for GameObjects 기반의 Unity 6 멀티플레이어 게임 프레임워크입니다.
+네트워크 게임을 위한 핵심 추상화 기능을 제공합니다.
 
-- **Unity Version**: 6000.3.2f1
-- **Primary Package**: `Packages/com.nelta9x.mayril/`
-- **Dependencies**: Unity Netcode for GameObjects 2.7.0
+- **Unity 버전**: 6000.3.2f1
+- **주요 패키지**: `Packages/com.nelta9x.mayril/`
+- **의존성**: Unity Netcode for GameObjects 2.7.0
 
-## Architecture
+## 아키텍처
 
-### Core Hierarchy
+### 핵심 계층 구조 (Core Hierarchy)
 
 ```mermaid
 graph TD
@@ -26,7 +26,7 @@ graph TD
     W --> TM[TimerManager<br/>지연 콜백]
 ```
 
-### Entity Lifecycle
+### 엔티티 생명주기 (Entity Lifecycle)
 
 ```mermaid
 sequenceDiagram
@@ -47,7 +47,7 @@ sequenceDiagram
     E->>W: RemoveEntity(this)
 ```
 
-### Key Classes
+### 주요 클래스 (Key Classes)
 
 | Class | Role |
 |-------|------|
@@ -58,7 +58,8 @@ sequenceDiagram
 | **Controller** | `Possess()`/`Unpossess()`로 엔티티 조종 |
 | **WorldSystem** | 씬 레벨 서비스 베이스 클래스, 리플렉션으로 자동 인스턴스화 |
 
-### Event System
+### 이벤트 시스템 (Event System)
+- [상세 문서](Packages/com.nelta9x.mayril/Runtime/EventSystem/AGENTS.md)
 
 ```mermaid
 flowchart LR
@@ -72,23 +73,30 @@ flowchart LR
 - `EventBus<T>.Trigger(new Event())`
 - 내장 이벤트: `WorldStarted`, `WorldDestroyed`, `EntityPlayStarted`, `EntityPlayEnded`
 
-### Subsystems
+### 서브시스템 (Subsystems)
 
-**AbilitySystem** - 스킬/버프 시스템
-- `IAbility`: 스킬 라이프사이클 훅 (OnSpellStart, OnDamage, OnKill 등)
-- `AbilityModifier`: 지속시간, 틱 간격, 활성화 태그를 가진 버프/디버프
+**AbilitySystem** - 스킬/버프 시스템 ([상세 문서](Packages/com.nelta9x.mayril/Runtime/AbilitySystem/AGENTS.md))
+- `AbilitySystemComponent (ASC)`: 시스템 허브, 스탯/태그/어빌리티/이펙트 관리
+- `Ability`: 액티브 스킬 로직
+- `Effect`: 데이터 정의 (Spec), `EffectInstance`로 풀링되어 적용
+- `EffectInstance`: 런타임 이펙트 객체, Zero Allocation (Pooling)
 
-**StatSystem** - 네트워크 동기화 스탯
+**TagSystem** - 계층형 태그 시스템 ([상세 문서](Packages/com.nelta9x.mayril/Runtime/TagSystem/AGENTS.md))
+- `GameTag`: `int` ID 기반, `Hierarchy` 지원 (예: `Status.CC.Stun` -> `Status.CC` -> `Status`)
+- `GameTagContainer`: `O(1)` 조회 성능, Expansion 전략 사용
+- `GameTagManager`: 태그 등록 및 캐싱 중앙 관리
+
+**StatSystem** - 네트워크 동기화 스탯 ([상세 문서](Packages/com.nelta9x.mayril/Runtime/StatSystem/AGENTS.md))
 - `StatValue`: 기본값 + 모디파이어 → 최종값 (NetworkVariable)
 - `StatModifier`: Flat, Additive, Multiplicative 타입
 
-**InventorySystem** - 슬롯 기반 아이템 관리
+**InventorySystem** - 슬롯 기반 아이템 관리 ([상세 문서](Packages/com.nelta9x.mayril/Runtime/InventorySystem/AGENTS.md))
 - `Inventory`: NetworkBehaviour, 슬롯 기반 저장
 - `IItem`: 스태킹 지원 아이템 인터페이스
 
-## Testing
+## 테스트 (Testing)
 
-Tests: `Packages/com.nelta9x.mayril/Tests/Runtime/`
+테스트 경로: `Packages/com.nelta9x.mayril/Tests/Runtime/`
 
 **Unity Editor에서 실행 (권장):**
 `Window > General > Test Runner`
@@ -116,7 +124,7 @@ public class MyTests
 }
 ```
 
-## Code Conventions
+## 코드 컨벤션 (Code Conventions)
 
 - 문서 주석은 한국어로 작성
 - 네트워크 콜백 오버라이드 시 `base.OnNetworkSpawn()` 호출 필수
