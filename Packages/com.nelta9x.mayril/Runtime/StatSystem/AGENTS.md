@@ -71,7 +71,19 @@ public class CharacterStats : NetworkBehaviour, IStatSet
 
 ### 2. 스탯 사용하기 (AbilitySystem 연동)
 
-`AbilitySystemComponent`는 같은 게임 오브젝트에 있는 `StatSet`을 자동으로 발견합니다.
+### 2. 스탯 사용하기 (AbilitySystem 연동)
+
+`AbilitySystemComponent`에 스탯을 명시적으로 등록해야 합니다.
+
+```csharp
+private void Awake()
+{
+    // ... 스탯 초기화
+    
+    // ASC에 등록
+    GetComponent<AbilitySystemComponent>().RegisterStatSet(this);
+}
+```
 
 ```csharp
 // 태그로 스탯 가져오기 (문자열 등록 불필요)
