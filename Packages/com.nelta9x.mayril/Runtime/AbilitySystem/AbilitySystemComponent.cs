@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Mayril.StatSystem;
 using Mayril.TagSystem;
+using Unity.Netcode;
 
 namespace Mayril.AbilitySystem
 {
@@ -9,7 +10,7 @@ namespace Mayril.AbilitySystem
     /// 어빌리티 시스템 컴포넌트.
     /// 어빌리티, 이펙트, 태그, 스탯을 중앙 관리하는 컴포넌트입니다.
     /// </summary>
-    public class AbilitySystemComponent : MonoBehaviour
+    public class AbilitySystemComponent : NetworkBehaviour
     {
         private readonly List<IStatSet> _statSets = new();
         private readonly List<EffectInstance> _activeEffects = new();
@@ -23,29 +24,29 @@ namespace Mayril.AbilitySystem
         /// <summary>
         /// 스탯 셋을 등록합니다.
         /// </summary>
-        public void RegisterStats(IStatSet statSet)
+        public void RegisterStats(IStatSet stats)
         {
-            if (statSet != null && !_statSets.Contains(statSet))
+            if (stats != null && !_statSets.Contains(stats))
             {
-                _statSets.Add(statSet);
+                _statSets.Add(stats);
             }
         }
 
         /// <summary>
         /// 스탯 셋 등록을 해제합니다.
         /// </summary>
-        public void UnregisterStats(IStatSet statSet)
+        public void UnregisterStats(IStatSet stats)
         {
-            if (statSet != null)
+            if (stats != null)
             {
-                _statSets.Remove(statSet);
+                _statSets.Remove(stats);
             }
         }
 
         /// <summary>
         /// 스탯을 가져옵니다.
         /// </summary>
-        public StatValue GetStat(GameTag tag)
+        public StatValue GetStat(GameTag statTag)
         {
             if (_statSets == null)
             {
@@ -54,12 +55,13 @@ namespace Mayril.AbilitySystem
 
             foreach (var stats in _statSets)
             {
-                var stat = stats.GetStatValue(tag);
+                var stat = stats.GetStatValue(statTag);
                 if (stat != null)
                 {
                     return stat;
                 }
             }
+
             return null;
         }
 
