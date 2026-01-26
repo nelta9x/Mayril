@@ -117,11 +117,13 @@ namespace Mayril.AbilitySystem
 
         /// <summary>
         /// 어빌리티를 제거합니다.
+        /// 활성 상태인 어빌리티는 자동으로 EndAbility()가 호출됩니다.
         /// </summary>
         public void RemoveAbility(Ability ability)
         {
             if (_grantedAbilities.Remove(ability))
             {
+                ability.EndAbility();
                 ability.OnRemoveAbility();
             }
         }
@@ -186,7 +188,9 @@ namespace Mayril.AbilitySystem
 
             if (isInstant)
             {
+                _ownedTags.AddTags(effectSpec.GrantedTags);
                 ExecuteEffect(activeEffect);
+                _ownedTags.RemoveTags(effectSpec.GrantedTags);
                 EffectInstancePool.Release(activeEffect);
                 return null; // Instant 이펙트는 활성 리스트에 남지 않음
             }
