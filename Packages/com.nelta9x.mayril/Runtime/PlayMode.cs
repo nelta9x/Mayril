@@ -200,10 +200,14 @@ namespace Mayril
         {
             Debug.Log($"[PlayMode] Server stopped. (IsGraceful: {isGraceful})");
         }
-
+        
         /// <summary>
         /// 클라이언트가 서버에 연결되었을 때 호출됩니다.
         /// </summary>
+        /// <remarks>
+        /// 씬이 생성된 이후 접속하는 클라이언트가 입장 시(Late Join) 호출됩니다.
+        /// 씬 이동으로 넘어온 클라이언트들은 OnSceneLoadEventCompleted의 TrySpawnPlayerStates에서 처리됩니다.  
+        /// </remarks>
         private void OnClientConnected(ulong clientId)
         {
             if (!_networkManager.ConnectedClients.TryGetValue(clientId, out var client))
