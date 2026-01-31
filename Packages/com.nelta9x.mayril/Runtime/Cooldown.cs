@@ -4,27 +4,29 @@ namespace Mayril
 {
     /// <summary>
     /// 스킬이나 능력의 쿨다운을 관리하는 유틸리티 클래스입니다.
+    /// 외부에서 경과 시간을 전달받아 업데이트합니다.
     /// </summary>
     public class Cooldown
     {
         private float _duration;
-        private float _lastUseTime = -Mathf.Infinity;
+        private float _elapsed;
 
         /// <summary>
         /// 쿨다운이 완료되어 사용 가능한지 여부
         /// </summary>
-        public bool IsReady => Time.time >= _lastUseTime + _duration;
+        public bool IsReady => _elapsed >= _duration;
 
         /// <summary>
         /// 남은 쿨다운 시간 (초)
         /// </summary>
-        public float TimeRemaining => Mathf.Max(0, (_lastUseTime + _duration) - Time.time);
-        
+        public float TimeRemaining => Mathf.Max(0, _duration - _elapsed);
+
         public Cooldown(float duration)
         {
             _duration = duration;
+            _elapsed = duration;
         }
-        
+
         /// <summary>
         /// 쿨다운 진행도 (0.0 ~ 1.0)
         /// </summary>
@@ -37,7 +39,7 @@ namespace Mayril
                     return 1f;
                 }
 
-                return Mathf.Clamp01((Time.time - _lastUseTime) / _duration);
+                return Mathf.Clamp01(_elapsed / _duration);
             }
         }
 
@@ -51,11 +53,25 @@ namespace Mayril
         }
 
         /// <summary>
+        /// 경과 시간을 전달받아 쿨다운을 진행시킵니다.
+        /// </summary>
+        /// <param name="elapsedTime">경과 시간 (초)</param>
+        public void Update(float elapsedTime)
+        {
+            if (IsReady)
+            {
+                return;
+            }
+
+            _elapsed += elapsedTime;
+        }
+
+        /// <summary>
         /// 쿨다운을 시작합니다.
         /// </summary>
         public void Use()
         {
-            _lastUseTime = Time.time;
+            _elapsed = 0f;
         }
 
         /// <summary>
@@ -63,7 +79,7 @@ namespace Mayril
         /// </summary>
         public void Reset()
         {
-            _lastUseTime = -Mathf.Infinity;
+            _elapsed = _duration;
         }
 
         /// <summary>
