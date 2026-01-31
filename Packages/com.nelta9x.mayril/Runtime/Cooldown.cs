@@ -21,12 +21,14 @@ namespace Mayril
         /// </summary>
         public float TimeRemaining => Mathf.Max(0, _duration - _elapsed);
 
+        public Cooldown() : this(0f) { }
+
         public Cooldown(float duration)
         {
             _duration = duration;
             _elapsed = duration;
         }
-
+        
         /// <summary>
         /// 쿨다운 진행도 (0.0 ~ 1.0)
         /// </summary>
@@ -41,6 +43,15 @@ namespace Mayril
 
                 return Mathf.Clamp01(_elapsed / _duration);
             }
+        }
+
+        /// <summary>
+        /// 쿨다운 경과 시간 (초)
+        /// </summary>
+        public float Elapsed
+        {
+            get => _elapsed;
+            set => _elapsed = value;
         }
 
         /// <summary>
