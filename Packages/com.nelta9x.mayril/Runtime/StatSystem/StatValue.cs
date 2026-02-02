@@ -126,22 +126,19 @@ namespace Mayril.StatSystem
         {
             float oldCurrentValue = _currentValue;
             float newCurrentValue = _modifiers.Apply(_baseValue);
-            bool isDirty = oldCurrentValue != newCurrentValue; 
-            if (isDirty)
+
+            // 외부 보정 로직이 항상 실행되도록 콜백을 먼저 호출.
+            if (_stats != null)
             {
-                if (_stats != null)
-                {
-                    // 값이 보정된 이후에도 변경이 되었는지 확인.
-                    _stats.OnStatValueChanging(this, ref newCurrentValue);
-                    isDirty = oldCurrentValue != newCurrentValue;
-                }
+                _stats.OnStatValueChanging(this, ref newCurrentValue);
             }
 
-            if (!isDirty)
+            // 보정된 값을 기준으로 변경 여부 판단.
+            if (oldCurrentValue == newCurrentValue)
             {
                 return;
             }
-            
+
             SetDirty(true);
             _currentValue = newCurrentValue;
             _stats?.OnStatValueChanged(this);
